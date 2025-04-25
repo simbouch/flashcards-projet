@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+pytesseract
+Pillow
+python-multipart
+loguru

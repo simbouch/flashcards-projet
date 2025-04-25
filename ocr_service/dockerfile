@@ -1,0 +1,25 @@
+# ocr_service/Dockerfile
+
+FROM python:3.10-slim
+
+# Installer Tesseract (fra) + Poppler pour pdf2image + libgl1 pour Pillow
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        tesseract-ocr \
+        tesseract-ocr-fra \
+        libgl1 && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copier et installer les dépendances Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copier le code source
+COPY src/ ./src/
+
+EXPOSE 8000
+
+# Lancer FastAPI via Uvicorn
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
