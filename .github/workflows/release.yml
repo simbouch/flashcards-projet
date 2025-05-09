@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Build and push OCR Service
+      uses: docker/build-push-action@v4
+      with:
+        context: ./ocr_service
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/ocr-service:latest
+          ghcr.io/${{ github.repository_owner }}/ocr-service:${{ steps.version.outputs.VERSION }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push LLM Service
+      uses: docker/build-push-action@v4
+      with:
+        context: ./llm_service
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/llm-service:latest
+          ghcr.io/${{ github.repository_owner }}/llm-service:${{ steps.version.outputs.VERSION }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push DB Module
+      uses: docker/build-push-action@v4
+      with:
+        context: ./db_module
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/db-module:latest
+          ghcr.io/${{ github.repository_owner }}/db-module:${{ steps.version.outputs.VERSION }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push Backend Service
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend_service
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/backend-service:latest
+          ghcr.io/${{ github.repository_owner }}/backend-service:${{ steps.version.outputs.VERSION }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push Frontend Service
+      uses: docker/build-push-action@v4
+      with:
+        context: ./frontend_service
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/frontend-service:latest
+          ghcr.io/${{ github.repository_owner }}/frontend-service:${{ steps.version.outputs.VERSION }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  create-release-notes:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        echo "## Changes" > changelog.md
+        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s" >> changelog.md
+
+    - name: Update release with changelog
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: changelog.md
+        append_body: |
+          ## Docker Images
+          - `ghcr.io/${{ github.repository_owner }}/ocr-service:${{ github.ref_name }}`
+          - `ghcr.io/${{ github.repository_owner }}/llm-service:${{ github.ref_name }}`
+          - `ghcr.io/${{ github.repository_owner }}/db-module:${{ github.ref_name }}`
+          - `ghcr.io/${{ github.repository_owner }}/backend-service:${{ github.ref_name }}`
+          - `ghcr.io/${{ github.repository_owner }}/frontend-service:${{ github.ref_name }}`
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

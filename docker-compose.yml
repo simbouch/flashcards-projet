@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  # OCR Service
+  ocr-service:
+    build:
+      context: ./ocr_service
+      dockerfile: Dockerfile
+    image: flashcards/ocr-service:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ocr_service/src:/app/src
+      - ocr_logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # LLM Service
+  llm-service:
+    build:
+      context: ./llm_service
+      dockerfile: Dockerfile
+    image: flashcards/llm-service:latest
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./llm_service/src:/app/src
+      - llm_logs:/app/logs
+      - llm_models:/app/models
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MODEL_NAME=bigscience/bloom-560m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  # Database Service
+  db-service:
+    build:
+      context: ./db_module
+      dockerfile: Dockerfile
+    image: flashcards/db-module:latest
+    volumes:
+      - ./db_module:/app
+      - db_data:/app/data
+      - db_logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=sqlite:///./data/flashcards.db
+    restart: unless-stopped
+
+  # Backend Service
+  backend-service:
+    build:
+      context: ./backend_service
+      dockerfile: Dockerfile
+    image: flashcards/backend-service:latest
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./backend_service/src:/app/src
+      - backend_logs:/app/logs
+      - ./uploads:/app/uploads
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OCR_SERVICE_URL=http://ocr-service:8000
+      - LLM_SERVICE_URL=http://llm-service:8001
+      - DATABASE_URL=sqlite:///./data/flashcards.db
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-supersecretkey}
+      - JWT_ALGORITHM=HS256
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+    depends_on:
+      - ocr-service
+      - llm-service
+      - db-service
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Frontend Service
+  frontend-service:
+    build:
+      context: ./frontend_service
+      dockerfile: Dockerfile
+    image: flashcards/frontend-service:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend_service/src:/app/src
+      - frontend_logs:/app/logs
+    environment:
+      - API_URL=http://localhost:8002
+    depends_on:
+      - backend-service
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  ocr_logs:
+  llm_logs:
+  llm_models:
+  db_data:
+  db_logs:
+  backend_logs:
+  frontend_logs:
