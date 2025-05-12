@@ -23,4 +23,4 @@ USER dbuser
 ENV PYTHONPATH=/app
 
 # Command to run when container starts
-CMD ["python", "-c", "from db_module.database import init_db; init_db()"]
+CMD ["python", "-c", "from database import init_db; init_db()"]

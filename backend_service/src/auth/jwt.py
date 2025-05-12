@@ -20,33 +20,53 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     """
     Create a JWT access token.
-    
+
     Args:
         data: Data to encode in the token.
         expires_delta: Token expiration time.
-        
+
     Returns:
         JWT token string.
     """
     to_encode = data.copy()
-    
+
     # Set expiration time
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     to_encode.update({"exp": expire})
-    
+
     # Create JWT token
     encoded_jwt = jwt.encode(
-        to_encode, 
-        settings.JWT_SECRET_KEY, 
+        to_encode,
+        settings.JWT_SECRET_KEY,
         algorithm=settings.JWT_ALGORITHM
     )
-    
+
     logger.debug(f"Created access token for user: {data.get('sub')}")
     return encoded_jwt
+
+def create_refresh_token_for_user(db: Session, user_id: str) -> models.RefreshToken:
+    """
+    Create a refresh token for a user.
+
+    Args:
+        db: Database session.
+        user_id: User ID.
+
+    Returns:
+        Refresh token object.
+    """
+    # Set expiration time for refresh token (longer than access token)
+    expires_delta = timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+
+    # Create refresh token in database
+    db_token = crud.create_refresh_token(db, user_id, expires_delta)
+
+    logger.debug(f"Created refresh token for user: {user_id}")
+    return db_token
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
@@ -54,14 +74,14 @@ async def get_current_user(
 ) -> models.User:
     """
     Get the current user from the JWT token.
-    
+
     Args:
         token: JWT token.
         db: Database session.
-        
+
     Returns:
         User object.
-        
+
     Raises:
         HTTPException: If token is invalid or user not found.
     """
@@ -70,31 +90,31 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
     try:
         # Decode JWT token
         payload = jwt.decode(
-            token, 
-            settings.JWT_SECRET_KEY, 
+            token,
+            settings.JWT_SECRET_KEY,
             algorithms=[settings.JWT_ALGORITHM]
         )
-        
+
         # Extract user ID from token
         user_id: str = payload.get("sub")
         if user_id is None:
             logger.warning("Token missing 'sub' field")
             raise credentials_exception
-        
+
     except JWTError as e:
         logger.warning(f"JWT error: {e}")
         raise credentials_exception
-    
+
     # Get user from database
     user = crud.get_user(db, user_id)
     if user is None:
         logger.warning(f"User not found: {user_id}")
         raise credentials_exception
-    
+
     # Check if user is active
     if not user.is_active:
         logger.warning(f"Inactive user: {user_id}")
@@ -102,7 +122,7 @@ async def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user"
         )
-    
+
     logger.debug(f"Authenticated user: {user.username}")
     return user
 
@@ -111,13 +131,13 @@ async def get_current_active_user(
 ) -> models.User:
     """
     Get the current active user.
-    
+
     Args:
         current_user: Current user.
-        
+
     Returns:
         User object.
-        
+
     Raises:
         HTTPException: If user is inactive.
     """
@@ -132,10 +152,10 @@ async def get_current_active_user(
 def is_admin(user: models.User) -> bool:
     """
     Check if user is an admin.
-    
+
     Args:
         user: User to check.
-        
+
     Returns:
         True if user is admin, False otherwise.
     """

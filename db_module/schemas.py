@@ -3,16 +3,45 @@ Pydantic schemas for API validation and serialization.
 """
 from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, List, Dict, Any, Union
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 from uuid import UUID
+
+# Authentication schemas
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    refresh_token: Optional[str] = None
+
+class TokenPayload(BaseModel):
+    sub: str
+    exp: datetime
+
+class RefreshTokenCreate(BaseModel):
+    user_id: str
+    token: str
+    expires_at: datetime
+
+class RefreshTokenInDB(BaseModel):
+    id: str
+    token: str
+    user_id: str
+    expires_at: datetime
+    revoked: bool
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class RefreshToken(RefreshTokenInDB):
+    pass
 
 # User schemas
 class UserBase(BaseModel):
     email: EmailStr
     username: str
     full_name: Optional[str] = None
-    
+
     @validator('username')
     def username_alphanumeric(cls, v):
         if not re.match(r'^[a-zA-Z0-9_-]+$', v):
@@ -21,7 +50,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
-    
+
     @validator('password')
     def password_strength(cls, v):
         if len(v) < 8:
@@ -45,7 +74,7 @@ class UserInDB(UserBase):
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     class Config:
         orm_mode = True
 
@@ -72,7 +101,7 @@ class DocumentInDB(DocumentBase):
     owner_id: str
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     class Config:
         orm_mode = True
 
@@ -90,7 +119,7 @@ class ExtractedTextInDB(ExtractedTextBase):
     id: str
     document_id: str
     created_at: datetime
-    
+
     class Config:
         orm_mode = True
 
@@ -117,7 +146,7 @@ class DeckInDB(DeckBase):
     document_id: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     class Config:
         orm_mode = True
 
@@ -144,7 +173,7 @@ class FlashcardInDB(FlashcardBase):
     deck_id: str
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     class Config:
         orm_mode = True
 
@@ -166,7 +195,7 @@ class StudySessionInDB(StudySessionBase):
     user_id: str
     started_at: datetime
     ended_at: Optional[datetime] = None
-    
+
     class Config:
         orm_mode = True
 
@@ -188,7 +217,7 @@ class StudyRecordInDB(StudyRecordBase):
     ease_factor: float
     interval: int
     created_at: datetime
-    
+
     class Config:
         orm_mode = True
 

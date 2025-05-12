@@ -8,6 +8,8 @@ from loguru import logger
 from typing import List, Optional, Dict, Any, Union
 from passlib.context import CryptContext
 import uuid
+import secrets
+from datetime import datetime, timedelta
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -256,3 +258,111 @@ def delete_flashcard(db: Session, flashcard_id: str) -> bool:
         logger.info(f"Deleted flashcard: {flashcard_id}")
         return True
     return False
+
+# Authentication functions
+def authenticate_user(db: Session, username: str, password: str) -> Optional[models.User]:
+    """Authenticate a user by username and password."""
+    user = get_user_by_username(db, username)
+    if not user:
+        return None
+    if not verify_password(password, user.hashed_password):
+        return None
+    return user
+
+# Refresh token operations
+def create_refresh_token(db: Session, user_id: str, expires_delta: timedelta = None) -> models.RefreshToken:
+    """Create a new refresh token for a user."""
+    if expires_delta is None:
+        expires_delta = timedelta(days=30)  # Default to 30 days
+
+    # Generate a secure token
+    token_value = secrets.token_urlsafe(64)
+    expires_at = datetime.now() + expires_delta
+
+    # Create token in database
+    db_token = models.RefreshToken(
+        id=str(uuid.uuid4()),
+        token=token_value,
+        user_id=user_id,
+        expires_at=expires_at
+    )
+
+    db.add(db_token)
+    db.commit()
+    db.refresh(db_token)
+    logger.info(f"Created refresh token for user: {user_id}")
+
+    return db_token
+
+def get_refresh_token(db: Session, token: str) -> Optional[models.RefreshToken]:
+    """Get a refresh token by its value."""
+    return db.query(models.RefreshToken).filter(models.RefreshToken.token == token).first()
+
+def validate_refresh_token(db: Session, token: str) -> Optional[models.User]:
+    """Validate a refresh token and return the associated user if valid."""
+    db_token = get_refresh_token(db, token)
+
+    if not db_token:
+        logger.warning("Refresh token not found")
+        return None
+
+    if db_token.revoked:
+        logger.warning(f"Revoked refresh token used: {db_token.id}")
+        return None
+
+    if db_token.is_expired:
+        logger.warning(f"Expired refresh token used: {db_token.id}")
+        return None
+
+    # Get the user associated with the token
+    user = get_user(db, db_token.user_id)
+    if not user or not user.is_active:
+        logger.warning(f"Token for inactive or deleted user: {db_token.user_id}")
+        return None
+
+    return user
+
+def revoke_refresh_token(db: Session, token: str) -> bool:
+    """Revoke a refresh token."""
+    db_token = get_refresh_token(db, token)
+    if db_token:
+        db_token.revoked = True
+        db.commit()
+        logger.info(f"Revoked refresh token: {db_token.id}")
+        return True
+    return False
+
+def revoke_all_user_tokens(db: Session, user_id: str) -> int:
+    """Revoke all refresh tokens for a user."""
+    tokens = db.query(models.RefreshToken).filter(
+        models.RefreshToken.user_id == user_id,
+        models.RefreshToken.revoked == False
+    ).all()
+
+    count = 0
+    for token in tokens:
+        token.revoked = True
+        count += 1
+
+    db.commit()
+    logger.info(f"Revoked {count} refresh tokens for user: {user_id}")
+    return count
+
+def rotate_refresh_token(db: Session, old_token: str, expires_delta: timedelta = None) -> Optional[models.RefreshToken]:
+    """Revoke the old token and create a new one."""
+    # Get and validate the old token
+    db_token = get_refresh_token(db, old_token)
+    if not db_token or db_token.revoked or db_token.is_expired:
+        logger.warning(f"Attempted to rotate invalid token: {old_token}")
+        return None
+
+    # Revoke the old token
+    db_token.revoked = True
+
+    # Create a new token
+    new_token = create_refresh_token(db, db_token.user_id, expires_delta)
+
+    db.commit()
+    logger.info(f"Rotated refresh token for user: {db_token.user_id}")
+
+    return new_token

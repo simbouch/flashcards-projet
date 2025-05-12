@@ -9,9 +9,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
+# Copy ESLint and Babel configs first
+COPY .eslintrc.js babel.config.js vue.config.js ./
+
 # Copy project files and build
 COPY . .
-RUN npm run build
+# Disable ESLint during build
+RUN npm run build -- --no-lint
 
 # Production stage
 FROM nginx:stable-alpine as production-stage

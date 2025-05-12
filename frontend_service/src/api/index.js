@@ -23,19 +23,47 @@ apiClient.interceptors.request.use(
   }
 )
 
-// Add response interceptor to handle common errors
+// Add response interceptor to handle common errors and token refresh
 apiClient.interceptors.response.use(
   response => {
     return response
   },
-  error => {
-    // Handle 401 Unauthorized errors
-    if (error.response && error.response.status === 401) {
-      // Clear token and redirect to login
+  async error => {
+    const originalRequest = error.config
+
+    // If error is 401 and we haven't tried to refresh the token yet
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true
+
+      // Try to refresh the token
+      const refreshToken = localStorage.getItem('refreshToken')
+      if (refreshToken) {
+        try {
+          // Import the store dynamically to avoid circular dependencies
+          const { useAuthStore } = await import('../store/auth')
+          const authStore = useAuthStore()
+
+          // Refresh the token
+          const success = await authStore.refreshAccessToken()
+
+          if (success) {
+            // Update the Authorization header with the new token
+            originalRequest.headers.Authorization = `Bearer ${localStorage.getItem('token')}`
+            // Retry the original request
+            return apiClient(originalRequest)
+          }
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError)
+        }
+      }
+
+      // If refresh failed or no refresh token, redirect to login
       localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
       localStorage.removeItem('user')
       window.location.href = '/login'
     }
+
     return Promise.reject(error)
   }
 )
@@ -60,6 +88,12 @@ export const authAPI = {
   },
   updateProfile(userData) {
     return apiClient.put('/users/me', userData)
+  },
+  refreshToken(refreshToken) {
+    return apiClient.post('/auth/refresh', { refresh_token: refreshToken })
+  },
+  logout(refreshToken) {
+    return apiClient.post('/auth/logout', { refresh_token: refreshToken })
   }
 }
 

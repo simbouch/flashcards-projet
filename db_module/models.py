@@ -2,7 +2,7 @@
 SQLAlchemy models for the flashcards application.
 """
 from sqlalchemy import (
-    Boolean, Column, ForeignKey, Integer, String, 
+    Boolean, Column, ForeignKey, Integer, String,
     Text, DateTime, Float, Table, Enum
 )
 from sqlalchemy.orm import relationship
@@ -10,6 +10,7 @@ from sqlalchemy.sql import func
 import enum
 from .database import Base
 import uuid
+from datetime import datetime, timedelta
 
 def generate_uuid():
     """Generate a UUID string for use as a primary key."""
@@ -50,16 +51,17 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     documents = relationship("Document", back_populates="owner")
     owned_decks = relationship("Deck", back_populates="owner")
     shared_decks = relationship(
-        "Deck", 
+        "Deck",
         secondary=user_deck_association,
         back_populates="shared_with"
     )
     study_sessions = relationship("StudySession", back_populates="user")
+    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
 
 class Document(Base):
     """Document model for storing uploaded files."""
@@ -73,10 +75,10 @@ class Document(Base):
     error_message = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Foreign keys
     owner_id = Column(String(36), ForeignKey("users.id"), nullable=False)
-    
+
     # Relationships
     owner = relationship("User", back_populates="documents")
     extracted_text = relationship("ExtractedText", back_populates="document", uselist=False)
@@ -89,10 +91,10 @@ class ExtractedText(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Foreign keys
     document_id = Column(String(36), ForeignKey("documents.id"), unique=True, nullable=False)
-    
+
     # Relationships
     document = relationship("Document", back_populates="extracted_text")
 
@@ -106,17 +108,17 @@ class Deck(Base):
     is_public = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Foreign keys
     owner_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     document_id = Column(String(36), ForeignKey("documents.id"))
-    
+
     # Relationships
     owner = relationship("User", back_populates="owned_decks")
     document = relationship("Document", back_populates="decks")
     flashcards = relationship("Flashcard", back_populates="deck")
     shared_with = relationship(
-        "User", 
+        "User",
         secondary=user_deck_association,
         back_populates="shared_decks"
     )
@@ -131,10 +133,10 @@ class Flashcard(Base):
     answer = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Foreign keys
     deck_id = Column(String(36), ForeignKey("decks.id"), nullable=False)
-    
+
     # Relationships
     deck = relationship("Deck", back_populates="flashcards")
     study_records = relationship("StudyRecord", back_populates="flashcard")
@@ -146,11 +148,11 @@ class StudySession(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid)
     started_at = Column(DateTime(timezone=True), server_default=func.now())
     ended_at = Column(DateTime(timezone=True))
-    
+
     # Foreign keys
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     deck_id = Column(String(36), ForeignKey("decks.id"), nullable=False)
-    
+
     # Relationships
     user = relationship("User", back_populates="study_sessions")
     deck = relationship("Deck", back_populates="study_sessions")
@@ -165,11 +167,37 @@ class StudyRecord(Base):
     interval = Column(Integer, default=0)  # Days until next review
     is_correct = Column(Boolean)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Foreign keys
     session_id = Column(String(36), ForeignKey("study_sessions.id"), nullable=False)
     flashcard_id = Column(String(36), ForeignKey("flashcards.id"), nullable=False)
-    
+
     # Relationships
     session = relationship("StudySession", back_populates="records")
     flashcard = relationship("Flashcard", back_populates="study_records")
+
+class RefreshToken(Base):
+    """Refresh tokens for authentication."""
+    __tablename__ = "refresh_tokens"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    token = Column(String(255), unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Foreign keys
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="refresh_tokens")
+
+    @property
+    def is_expired(self):
+        """Check if the token is expired."""
+        return datetime.now() > self.expires_at
+
+    @property
+    def is_valid(self):
+        """Check if the token is valid (not expired and not revoked)."""
+        return not self.revoked and not self.is_expired
