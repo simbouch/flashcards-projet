@@ -45,6 +45,15 @@
 
                   <div>
                     <v-btn
+                      color="grey darken-1"
+                      @click="goBack"
+                      class="mr-2"
+                    >
+                      <v-icon left>mdi-arrow-left</v-icon>
+                      Back
+                    </v-btn>
+
+                    <v-btn
                       color="primary"
                       @click="startStudySession"
                       :disabled="!deck.flashcards || deck.flashcards.length === 0"
@@ -57,9 +66,20 @@
                     <v-btn
                       color="secondary"
                       @click="showAddCardDialog = true"
+                      v-if="!isSystemDeck"
+                      class="mr-2"
                     >
                       <v-icon left>mdi-plus</v-icon>
                       Add Card
+                    </v-btn>
+
+                    <v-btn
+                      color="error"
+                      @click="confirmDeleteDeck"
+                      v-if="!isSystemDeck"
+                    >
+                      <v-icon left>mdi-delete</v-icon>
+                      Delete Deck
                     </v-btn>
                   </div>
                 </div>
@@ -76,12 +96,16 @@
                 <div v-if="!deck.flashcards || deck.flashcards.length === 0" class="text-center pa-4">
                   <p>No flashcards in this deck yet.</p>
                   <v-btn
+                    v-if="!isSystemDeck"
                     color="primary"
                     @click="showAddCardDialog = true"
                     class="mt-2"
                   >
                     Add Your First Flashcard
                   </v-btn>
+                  <p v-else class="mt-2 text-caption">
+                    This is a native deck. You cannot add flashcards to it.
+                  </p>
                 </div>
 
                 <v-expansion-panels v-else>
@@ -103,7 +127,7 @@
                           <v-card-text class="text-body-1">{{ card.answer }}</v-card-text>
                         </v-card>
 
-                        <div class="d-flex justify-end mt-2">
+                        <div class="d-flex justify-end mt-2" v-if="!isSystemDeck">
                           <v-btn
                             color="primary"
                             small
@@ -233,6 +257,42 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Delete Deck Confirmation Dialog -->
+    <v-dialog
+      v-model="showDeleteDeckDialog"
+      max-width="400px"
+    >
+      <v-card>
+        <v-card-title class="text-h5">
+          Confirm Delete Deck
+        </v-card-title>
+
+        <v-card-text>
+          Are you sure you want to delete the deck <strong>{{ deck?.title }}</strong>?
+          This will also delete all flashcards in this deck.
+          This action cannot be undone.
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="grey darken-1"
+            text
+            @click="showDeleteDeckDialog = false"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            @click="deleteDeck"
+            :loading="deletingDeck"
+          >
+            Delete Deck
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -255,6 +315,7 @@ export default {
       loading: true,
       showAddCardDialog: false,
       showDeleteCardDialog: false,
+      showDeleteDeckDialog: false,
       editMode: false,
       cardForm: {
         question: '',
@@ -262,12 +323,30 @@ export default {
       },
       selectedCard: null,
       saving: false,
-      deleting: false
+      deleting: false,
+      deletingDeck: false
     }
   },
   computed: {
     deck() {
       return this.decksStore.currentDeck
+    },
+    isSystemDeck() {
+      // Check if this is a system deck (public native deck)
+      const result = this.deck &&
+             this.deck.is_public &&
+             this.deck.owner_id &&
+             this.deck.owner_id.includes('system');
+
+      console.log(`isSystemDeck check for deck ${this.deck?.title}:`, {
+        hasDeck: !!this.deck,
+        isPublic: this.deck?.is_public,
+        ownerId: this.deck?.owner_id,
+        includesSystem: this.deck?.owner_id?.includes('system'),
+        result: result
+      });
+
+      return result;
     }
   },
   created() {
@@ -278,10 +357,11 @@ export default {
       this.loading = true
       try {
         // Try to fetch the deck
-        await this.decksStore.fetchDeck(this.id)
+        const deck = await this.decksStore.fetchDeck(this.id)
 
-        // If deck not found, check if it's a public deck
-        if (!this.deck && this.decksStore.error) {
+        if (deck) {
+          console.log(`Successfully fetched deck: ${deck.title} with ${deck.flashcards?.length || 0} flashcards`)
+        } else {
           console.log('Trying to fetch as public deck...')
           // Fetch public decks if not already loaded
           if (this.decksStore.publicDecks.length === 0) {
@@ -291,8 +371,8 @@ export default {
           // Find the deck in public decks
           const publicDeck = this.decksStore.publicDecks.find(d => d.id === this.id)
           if (publicDeck) {
-            // Set the current deck to the found public deck
-            this.decksStore.currentDeck = publicDeck
+            // Create a deep copy to avoid reference issues
+            this.decksStore.currentDeck = JSON.parse(JSON.stringify(publicDeck))
 
             // Fetch flashcards for this deck
             try {
@@ -300,6 +380,7 @@ export default {
               if (flashcardsResponse) {
                 // Add flashcards to the deck
                 this.decksStore.currentDeck.flashcards = flashcardsResponse
+                console.log(`Added ${flashcardsResponse.length} flashcards to public deck ${this.id}`)
               }
             } catch (flashcardsError) {
               console.error('Failed to fetch flashcards:', flashcardsError)
@@ -317,6 +398,15 @@ export default {
       if (!dateString) return ''
       const date = new Date(dateString)
       return date.toLocaleString()
+    },
+
+    goBack() {
+      // If it's a public deck, go back to public decks, otherwise go to my decks
+      if (this.deck && this.deck.is_public && !this.deck.owner_id.includes(this.decksStore.userId)) {
+        this.$router.push('/public-decks')
+      } else {
+        this.$router.push('/decks')
+      }
     },
 
     startStudySession() {
@@ -413,6 +503,26 @@ export default {
         console.error('Failed to delete card:', error)
       } finally {
         this.deleting = false
+      }
+    },
+
+    confirmDeleteDeck() {
+      this.showDeleteDeckDialog = true
+    },
+
+    async deleteDeck() {
+      this.deletingDeck = true
+
+      try {
+        await this.decksStore.deleteDeck(this.id)
+
+        // Navigate back to decks list after successful deletion
+        this.$router.push('/decks')
+      } catch (error) {
+        console.error('Failed to delete deck:', error)
+      } finally {
+        this.deletingDeck = false
+        this.showDeleteDeckDialog = false
       }
     }
   }

@@ -168,14 +168,14 @@ def create_system_user(db: Session):
     return system_user
 
 def delete_existing_decks(db: Session, system_user_id: str):
-    """Delete all existing decks in the database"""
-    logger.info("Deleting all existing decks...")
+    """Delete only system-owned decks in the database"""
+    logger.info("Deleting existing system-owned decks...")
 
-    # Get all decks in the database
-    existing_decks = db.query(Deck).all()
+    # Get only system-owned decks
+    existing_decks = db.query(Deck).filter(Deck.owner_id == system_user_id).all()
 
     for deck in existing_decks:
-        logger.info(f"Deleting deck: {deck.title} (ID: {deck.id})")
+        logger.info(f"Deleting system deck: {deck.title} (ID: {deck.id})")
 
         # Delete all flashcards in the deck
         db.query(Flashcard).filter(Flashcard.deck_id == deck.id).delete()
@@ -185,7 +185,7 @@ def delete_existing_decks(db: Session, system_user_id: str):
 
     # Commit the changes
     db.commit()
-    logger.info(f"Deleted {len(existing_decks)} existing decks")
+    logger.info(f"Deleted {len(existing_decks)} existing system decks")
 
 def create_native_decks(delete_existing=True):
     """Create native decks that will always be available

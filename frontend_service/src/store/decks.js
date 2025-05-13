@@ -7,7 +7,8 @@ export const useDecksStore = defineStore('decks', {
     publicDecks: [],
     currentDeck: null,
     loading: false,
-    error: null
+    error: null,
+    userId: localStorage.getItem('userId') || null
   }),
 
   getters: {
@@ -40,7 +41,12 @@ export const useDecksStore = defineStore('decks', {
 
       try {
         const response = await decksAPI.getPublicDecks()
-        this.publicDecks = response.data
+
+        // Create a deep copy of the response data to avoid reference issues
+        this.publicDecks = JSON.parse(JSON.stringify(response.data))
+
+        console.log(`Fetched ${this.publicDecks.length} public decks`)
+
         this.loading = false
         return this.publicDecks
       } catch (error) {
@@ -56,7 +62,15 @@ export const useDecksStore = defineStore('decks', {
 
       try {
         const response = await decksAPI.getDeck(id)
-        this.currentDeck = response.data
+
+        // Create a deep copy of the response data to avoid reference issues
+        const deckData = JSON.parse(JSON.stringify(response.data))
+
+        // Store the deck data in currentDeck
+        this.currentDeck = deckData
+
+        console.log(`Fetched deck ${id} (${deckData.title}) with ${deckData.flashcards?.length || 0} flashcards`)
+
         this.loading = false
         return this.currentDeck
       } catch (error) {

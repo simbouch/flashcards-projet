@@ -22,9 +22,10 @@ export const useFlashcardsStore = defineStore('flashcards', {
 
       try {
         const response = await flashcardsAPI.getFlashcards(deckId)
-        this.flashcards = response.data
+        // Don't store in this.flashcards to avoid overwriting global state
+        // Just return the response data directly
         this.loading = false
-        return this.flashcards
+        return response.data
       } catch (error) {
         this.loading = false
         this.error = error.response?.data?.detail || 'Failed to fetch flashcards'

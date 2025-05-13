@@ -349,10 +349,10 @@ export default {
       this.loading = true
       try {
         // Try to fetch the deck
-        await this.decksStore.fetchDeck(this.deckId)
+        const deck = await this.decksStore.fetchDeck(this.deckId)
 
         // If deck not found, check if it's a public deck
-        if (!this.deck && this.decksStore.error) {
+        if (!deck && this.decksStore.error) {
           console.log('Trying to fetch as public deck...')
           // Fetch public decks if not already loaded
           if (this.decksStore.publicDecks.length === 0) {
@@ -362,8 +362,13 @@ export default {
           // Find the deck in public decks
           const publicDeck = this.decksStore.publicDecks.find(d => d.id === this.deckId)
           if (publicDeck) {
-            // Set the current deck to the found public deck
-            this.decksStore.currentDeck = publicDeck
+            // Create a deep copy of the public deck to avoid reference issues
+            const publicDeckCopy = JSON.parse(JSON.stringify(publicDeck))
+
+            // Set the current deck to the copy of the public deck
+            this.decksStore.currentDeck = publicDeckCopy
+
+            console.log(`Found public deck: ${publicDeckCopy.title}`)
 
             // Fetch flashcards for this deck
             try {
@@ -371,6 +376,7 @@ export default {
               if (flashcardsResponse) {
                 // Add flashcards to the deck
                 this.decksStore.currentDeck.flashcards = flashcardsResponse
+                console.log(`Added ${flashcardsResponse.length} flashcards to public deck ${this.deckId}`)
               }
             } catch (flashcardsError) {
               console.error('Failed to fetch flashcards:', flashcardsError)
