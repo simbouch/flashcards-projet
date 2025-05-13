@@ -9,19 +9,19 @@ export const useDecksStore = defineStore('decks', {
     loading: false,
     error: null
   }),
-  
+
   getters: {
     getDeckById: (state) => (id) => {
-      return state.decks.find(deck => deck.id === id) || 
+      return state.decks.find(deck => deck.id === id) ||
              state.publicDecks.find(deck => deck.id === id)
     }
   },
-  
+
   actions: {
     async fetchDecks() {
       this.loading = true
       this.error = null
-      
+
       try {
         const response = await decksAPI.getDecks()
         this.decks = response.data
@@ -33,11 +33,11 @@ export const useDecksStore = defineStore('decks', {
         return []
       }
     },
-    
+
     async fetchPublicDecks() {
       this.loading = true
       this.error = null
-      
+
       try {
         const response = await decksAPI.getPublicDecks()
         this.publicDecks = response.data
@@ -49,11 +49,11 @@ export const useDecksStore = defineStore('decks', {
         return []
       }
     },
-    
+
     async fetchDeck(id) {
       this.loading = true
       this.error = null
-      
+
       try {
         const response = await decksAPI.getDeck(id)
         this.currentDeck = response.data
@@ -65,11 +65,11 @@ export const useDecksStore = defineStore('decks', {
         return null
       }
     },
-    
+
     async createDeck(deckData) {
       this.loading = true
       this.error = null
-      
+
       try {
         const response = await decksAPI.createDeck(deckData)
         // Add the new deck to the list
@@ -82,11 +82,11 @@ export const useDecksStore = defineStore('decks', {
         return null
       }
     },
-    
+
     async updateDeck(id, deckData) {
       this.loading = true
       this.error = null
-      
+
       try {
         const response = await decksAPI.updateDeck(id, deckData)
         // Update the deck in the list
@@ -106,11 +106,11 @@ export const useDecksStore = defineStore('decks', {
         return null
       }
     },
-    
+
     async deleteDeck(id) {
       this.loading = true
       this.error = null
-      
+
       try {
         await decksAPI.deleteDeck(id)
         // Remove the deck from the list
@@ -127,11 +127,11 @@ export const useDecksStore = defineStore('decks', {
         return false
       }
     },
-    
+
     async shareDeck(deckId, userId) {
       this.loading = true
       this.error = null
-      
+
       try {
         const response = await decksAPI.shareDeck(deckId, userId)
         this.loading = false
@@ -142,7 +142,7 @@ export const useDecksStore = defineStore('decks', {
         return null
       }
     },
-    
+
     clearError() {
       this.error = null
     }

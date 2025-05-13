@@ -8,18 +8,18 @@ export const useFlashcardsStore = defineStore('flashcards', {
     loading: false,
     error: null
   }),
-  
+
   getters: {
     getFlashcardById: (state) => (id) => {
       return state.flashcards.find(card => card.id === id)
     }
   },
-  
+
   actions: {
     async fetchFlashcards(deckId) {
       this.loading = true
       this.error = null
-      
+
       try {
         const response = await flashcardsAPI.getFlashcards(deckId)
         this.flashcards = response.data
@@ -31,11 +31,11 @@ export const useFlashcardsStore = defineStore('flashcards', {
         return []
       }
     },
-    
+
     async fetchFlashcard(id) {
       this.loading = true
       this.error = null
-      
+
       try {
         const response = await flashcardsAPI.getFlashcard(id)
         this.currentFlashcard = response.data
@@ -47,11 +47,11 @@ export const useFlashcardsStore = defineStore('flashcards', {
         return null
       }
     },
-    
+
     async createFlashcard(flashcardData) {
       this.loading = true
       this.error = null
-      
+
       try {
         const response = await flashcardsAPI.createFlashcard(flashcardData)
         // Add the new flashcard to the list
@@ -64,11 +64,11 @@ export const useFlashcardsStore = defineStore('flashcards', {
         return null
       }
     },
-    
+
     async updateFlashcard(id, flashcardData) {
       this.loading = true
       this.error = null
-      
+
       try {
         const response = await flashcardsAPI.updateFlashcard(id, flashcardData)
         // Update the flashcard in the list
@@ -88,11 +88,11 @@ export const useFlashcardsStore = defineStore('flashcards', {
         return null
       }
     },
-    
+
     async deleteFlashcard(id) {
       this.loading = true
       this.error = null
-      
+
       try {
         await flashcardsAPI.deleteFlashcard(id)
         // Remove the flashcard from the list
@@ -109,7 +109,7 @@ export const useFlashcardsStore = defineStore('flashcards', {
         return false
       }
     },
-    
+
     clearError() {
       this.error = null
     }

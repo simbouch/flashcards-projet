@@ -62,8 +62,7 @@ const routes = [
     path: '/study/:deckId',
     name: 'study',
     component: StudyView,
-    props: true,
-    meta: { requiresAuth: true }
+    props: true
   },
   {
     path: '/:pathMatch(.*)*',

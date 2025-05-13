@@ -11,6 +11,7 @@ from .config import settings
 from .logger_config import logger
 from .api import api_router
 from db_module.database import init_db
+from .scripts.create_native_decks import create_native_decks
 
 # Create FastAPI app
 app = FastAPI(
@@ -34,14 +35,22 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 async def startup_event():
     """Initialize resources on startup."""
     logger.info("Starting backend service")
-    
+
     # Initialize database
     init_db()
-    
+
     # Create upload directory if it doesn't exist
     upload_dir = Path(settings.UPLOAD_DIR)
     upload_dir.mkdir(parents=True, exist_ok=True)
-    
+
+    # Create native decks (deleting existing ones)
+    try:
+        logger.info("Creating native decks...")
+        create_native_decks(delete_existing=True)
+        logger.info("Native decks created successfully")
+    except Exception as e:
+        logger.error(f"Error creating native decks: {str(e)}")
+
     logger.info("Backend service started successfully")
 
 @app.get("/")

@@ -30,14 +30,14 @@ async def create_deck(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Document not found"
             )
-        
+
         if document.owner_id != current_user.id:
             logger.warning(f"User {current_user.username} attempted to create deck for document {deck_in.document_id}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not enough permissions"
             )
-    
+
     # Create deck
     deck = crud.create_deck(db, deck_in, current_user.id)
     logger.info(f"Deck created: {deck.id}")
@@ -70,6 +70,8 @@ async def read_public_decks(
     decks = crud.get_public_decks(db, skip=skip, limit=limit)
     return decks
 
+
+
 @router.get("/{deck_id}", response_model=schemas.DeckWithFlashcards)
 async def read_deck(
     deck_id: str,
@@ -86,7 +88,7 @@ async def read_deck(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Deck not found"
         )
-    
+
     # Check if user is the owner or the deck is public
     if deck.owner_id != current_user.id and not deck.is_public:
         # Check if deck is shared with user
@@ -96,16 +98,16 @@ async def read_deck(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not enough permissions"
             )
-    
+
     # Get flashcards for the deck
     flashcards = crud.get_flashcards_by_deck(db, deck_id)
-    
+
     # Create response
     response = schemas.DeckWithFlashcards(
         **deck.__dict__,
         flashcards=flashcards
     )
-    
+
     return response
 
 @router.put("/{deck_id}", response_model=schemas.Deck)
@@ -125,7 +127,7 @@ async def update_deck(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Deck not found"
         )
-    
+
     # Check if user is the owner
     if deck.owner_id != current_user.id:
         logger.warning(f"User {current_user.username} attempted to update deck {deck_id}")
@@ -133,7 +135,7 @@ async def update_deck(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"
         )
-    
+
     # Update deck
     deck = crud.update_deck(db, deck_id, deck_in)
     logger.info(f"Deck updated: {deck.id}")
@@ -155,7 +157,7 @@ async def delete_deck(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Deck not found"
         )
-    
+
     # Check if user is the owner
     if deck.owner_id != current_user.id:
         logger.warning(f"User {current_user.username} attempted to delete deck {deck_id}")
@@ -163,7 +165,7 @@ async def delete_deck(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"
         )
-    
+
     # Delete deck
     crud.delete_deck(db, deck_id)
     logger.info(f"Deck deleted: {deck_id}")
@@ -186,7 +188,7 @@ async def share_deck(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Deck not found"
         )
-    
+
     # Check if user is the owner
     if deck.owner_id != current_user.id:
         logger.warning(f"User {current_user.username} attempted to share deck {deck_id}")
@@ -194,7 +196,7 @@ async def share_deck(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"
         )
-    
+
     # Check if target user exists
     user = crud.get_user(db, user_id)
     if not user:
@@ -203,7 +205,7 @@ async def share_deck(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    
+
     # Share deck
     success = crud.share_deck(db, deck_id, user_id)
     if not success:
@@ -212,6 +214,6 @@ async def share_deck(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to share deck"
         )
-    
+
     logger.info(f"Deck {deck_id} shared with user {user_id}")
     return deck
