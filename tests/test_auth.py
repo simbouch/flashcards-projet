@@ -5,12 +5,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from db_module import crud
-from src.main import app
+from backend_service.src.main import app
 
-# Create a test client
-client = TestClient(app)
-
-def test_login(db_override, test_user):
+def test_login(client, db_override, test_user):
     """Test login endpoint."""
     # Test with correct credentials
     response = client.post(
@@ -46,7 +43,7 @@ def test_login(db_override, test_user):
     )
     assert response.status_code == 401
 
-def test_refresh_token_endpoint(db_override, test_refresh_token, test_db):
+def test_refresh_token_endpoint(client, db_override, test_refresh_token, test_db):
     """Test refresh token endpoint."""
     # Test with valid refresh token
     response = client.post(
@@ -77,7 +74,7 @@ def test_refresh_token_endpoint(db_override, test_refresh_token, test_db):
     )
     assert response.status_code == 401
 
-def test_logout(db_override, test_refresh_token, test_db):
+def test_logout(client, db_override, test_refresh_token, test_db):
     """Test logout endpoint."""
     # Test with valid refresh token
     response = client.post(
