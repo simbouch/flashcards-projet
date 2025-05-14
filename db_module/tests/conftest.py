@@ -54,8 +54,8 @@ def test_document(db_session, test_user):
         mime_type="image/png"
     )
     document = crud.create_document(
-        db_session, 
-        document_data, 
+        db_session,
+        document_data,
         owner_id=test_user.id,
         file_path="/path/to/test.png"
     )
@@ -92,3 +92,29 @@ def test_flashcard(db_session, test_deck):
     )
     flashcard = crud.create_flashcard(db_session, flashcard_data)
     return flashcard
+
+@pytest.fixture
+def test_refresh_token(db_session, test_user):
+    """Create a test refresh token."""
+    from datetime import datetime, timedelta
+    # Create a refresh token that expires in 7 days
+    expires_at = datetime.utcnow() + timedelta(days=7)
+    refresh_token = schemas.RefreshTokenCreate(
+        user_id=test_user.id,
+        token="test-refresh-token",
+        expires_at=expires_at
+    )
+    # Create the refresh token in the database
+    from db_module.models import RefreshToken
+    db_refresh_token = RefreshToken(
+        id=crud.generate_uuid(),
+        user_id=refresh_token.user_id,
+        token=refresh_token.token,
+        expires_at=refresh_token.expires_at,
+        revoked=False,
+        created_at=datetime.utcnow()
+    )
+    db_session.add(db_refresh_token)
+    db_session.commit()
+    db_session.refresh(db_refresh_token)
+    return db_refresh_token

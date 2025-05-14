@@ -5,92 +5,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from db_module import crud
-from backend_service.src.main import app
+from src.main import app
 
 # Create a test client
 client = TestClient(app)
-
-@pytest.fixture
-def test_db():
-    """Get a test database session."""
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-    from sqlalchemy.pool import StaticPool
-    from db_module.database import Base
-    import db_module.models  # Import all models to ensure they're registered with Base
-
-    # Use in-memory SQLite for tests
-    SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-
-    # Create all tables in the database
-    Base.metadata.create_all(bind=engine)
-
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = TestingSessionLocal()
-
-    try:
-        yield db
-    finally:
-        db.close()
-
-# Override the dependency to use the test database
-@pytest.fixture
-def db_override(monkeypatch, test_db):
-    """Override the database dependency."""
-    # Override the get_db dependency
-    def override_get_db():
-        try:
-            yield test_db
-        finally:
-            pass
-
-    monkeypatch.setattr("db_module.database.get_db", override_get_db)
-    monkeypatch.setattr("backend_service.src.api.deps.get_db", override_get_db)
-
-    # Initialize the database tables
-    from db_module.database import Base
-    from sqlalchemy import create_engine
-
-    # Get the engine from the test_db session
-    engine = test_db.get_bind()
-
-    # Create all tables in the database
-    Base.metadata.create_all(bind=engine)
-
-    # Don't return anything, this fixture just sets up the override
-
-@pytest.fixture
-def test_user(test_db):
-    """Create a test user."""
-    from db_module import schemas, crud
-
-    user_data = schemas.UserCreate(
-        email="test@example.com",
-        username="testuser",
-        password="Password123",
-        full_name="Test User"
-    )
-    user = crud.create_user(test_db, user_data)
-    return user
-
-@pytest.fixture
-def test_refresh_token(test_db, test_user):
-    """Create a test refresh token."""
-    # Use the crud function to create a refresh token
-    from db_module import crud
-    from datetime import timedelta
-
-    # Create a refresh token with 7 days expiration
-    expires_delta = timedelta(days=7)
-    db_refresh_token = crud.create_refresh_token(test_db, test_user.id, expires_delta)
-
-    return db_refresh_token
 
 def test_login(db_override, test_user):
     """Test login endpoint."""
@@ -128,7 +46,7 @@ def test_login(db_override, test_user):
     )
     assert response.status_code == 401
 
-def test_refresh_token(db_override, test_refresh_token, test_db):
+def test_refresh_token_endpoint(db_override, test_refresh_token, test_db):
     """Test refresh token endpoint."""
     # Test with valid refresh token
     response = client.post(

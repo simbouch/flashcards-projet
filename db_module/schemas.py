@@ -31,7 +31,8 @@ class RefreshTokenInDB(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        orm_mode = True  # Keep for backward compatibility
 
 class RefreshToken(RefreshTokenInDB):
     pass
@@ -76,7 +77,8 @@ class UserInDB(UserBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        orm_mode = True  # Keep for backward compatibility
 
 class User(UserInDB):
     pass
@@ -103,7 +105,8 @@ class DocumentInDB(DocumentBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        orm_mode = True  # Keep for backward compatibility
 
 class Document(DocumentInDB):
     pass
@@ -121,7 +124,8 @@ class ExtractedTextInDB(ExtractedTextBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        orm_mode = True  # Keep for backward compatibility
 
 class ExtractedText(ExtractedTextInDB):
     pass
@@ -148,7 +152,8 @@ class DeckInDB(DeckBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        orm_mode = True  # Keep for backward compatibility
 
 class Deck(DeckInDB):
     pass
@@ -175,7 +180,8 @@ class FlashcardInDB(FlashcardBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        orm_mode = True  # Keep for backward compatibility
 
 class Flashcard(FlashcardInDB):
     pass
@@ -197,7 +203,8 @@ class StudySessionInDB(StudySessionBase):
     ended_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        orm_mode = True  # Keep for backward compatibility
 
 class StudySession(StudySessionInDB):
     pass
@@ -219,10 +226,11 @@ class StudyRecordInDB(StudyRecordBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        orm_mode = True  # Keep for backward compatibility
 
 class StudyRecord(StudyRecordInDB):
     pass
 
 # Update forward references for nested models
-DeckWithFlashcards.update_forward_refs()
+DeckWithFlashcards.model_rebuild()

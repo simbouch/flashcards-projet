@@ -100,12 +100,16 @@ async def read_deck(
             )
 
     # Get flashcards for the deck
-    flashcards = crud.get_flashcards_by_deck(db, deck_id)
+    db_flashcards = crud.get_flashcards_by_deck(db, deck_id)
 
-    # Create response
+    # Create a DeckWithFlashcards response using Pydantic's from_attributes feature
+    # First convert the SQLAlchemy model to a Pydantic model
+    deck_data = schemas.Deck.model_validate(deck, from_attributes=True)
+
+    # Create the DeckWithFlashcards model with the deck data and flashcards
     response = schemas.DeckWithFlashcards(
-        **deck.__dict__,
-        flashcards=flashcards
+        **deck_data.model_dump(),
+        flashcards=[schemas.Flashcard.model_validate(flashcard, from_attributes=True) for flashcard in db_flashcards]
     )
 
     return response
