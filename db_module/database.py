@@ -3,8 +3,7 @@ Database connection and session management for the flashcards application.
 """
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 from loguru import logger
 from pathlib import Path
 import sys

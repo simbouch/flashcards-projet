@@ -1,7 +1,7 @@
 """
 Pydantic schemas for API validation and serialization.
 """
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, timedelta
 import re
@@ -43,7 +43,8 @@ class UserBase(BaseModel):
     username: str
     full_name: Optional[str] = None
 
-    @validator('username')
+    @field_validator('username')
+    @classmethod
     def username_alphanumeric(cls, v):
         if not re.match(r'^[a-zA-Z0-9_-]+$', v):
             raise ValueError('Username must be alphanumeric with optional underscores and hyphens')
@@ -52,7 +53,8 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def password_strength(cls, v):
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters')

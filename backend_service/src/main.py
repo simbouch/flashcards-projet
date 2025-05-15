@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 from .config import settings
 from .logger_config import logger
@@ -13,27 +14,10 @@ from .api import api_router
 from db_module.database import init_db
 from .scripts.create_native_decks import create_native_decks
 
-# Create FastAPI app
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Include API router
-app.include_router(api_router, prefix=settings.API_V1_STR)
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize resources on startup."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan events for the FastAPI application."""
+    # Startup events
     logger.info("Starting backend service")
 
     # Initialize database
@@ -52,6 +36,30 @@ async def startup_event():
         logger.error(f"Error creating native decks: {str(e)}")
 
     logger.info("Backend service started successfully")
+
+    yield
+
+    # Shutdown events
+    logger.info("Shutting down backend service")
+
+# Create FastAPI app
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include API router
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():

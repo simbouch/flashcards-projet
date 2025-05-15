@@ -7,7 +7,13 @@ This directory contains tests for the backend service of the Flashcards applicat
 The tests are organized into the following directories:
 
 - `unit/`: Unit tests that mock dependencies and test individual components in isolation
+  - `test_auth_service.py`: Tests for authentication service functions
+  - `test_deck_service.py`: Tests for deck service functions
+  - `test_flashcard_service.py`: Tests for flashcard service functions
+
 - `integration/`: Integration tests that test multiple components together
+  - `test_flashcards.py`: Tests for flashcard generation flow
+
 - `conftest.py`: Pytest configuration and fixtures for the tests
 - `test_auth.py`: Tests for authentication endpoints
 - `test_refresh_token.py`: Tests for refresh token functionality

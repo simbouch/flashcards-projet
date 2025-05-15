@@ -5,6 +5,8 @@ This directory contains unit tests for the backend service. Unit tests focus on 
 ## Test Files
 
 - `test_auth_service.py`: Tests for the authentication service
+- `test_deck_service.py`: Tests for the deck service
+- `test_flashcard_service.py`: Tests for the flashcard service
 
 ## Writing Unit Tests
 
@@ -25,10 +27,10 @@ def test_create_access_token():
     # Arrange
     user_id = 1
     expires_delta = timedelta(minutes=15)
-    
+
     # Act
     token = create_access_token({"sub": str(user_id)}, expires_delta)
-    
+
     # Assert
     assert token is not None
     assert isinstance(token, str)

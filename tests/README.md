@@ -1,18 +1,27 @@
 # Flashcards Application Tests
 
-This directory contains tests for the Flashcards application.
+This directory contains application-level tests for the Flashcards application. These tests focus on the integration between different services.
 
 ## Test Structure
 
-The tests are organized as follows:
+The tests in the project are organized as follows:
 
-- `integration/`: Integration tests that test the entire application
-  - `test_app_integration.py`: Tests the complete flow from uploading an image to generating flashcards
-  - `images/`: Test images used by the integration tests
+- `tests/`: Application-level tests
+  - `integration/`: Integration tests for the entire application
+    - `test_app.py`: Tests for individual service health checks
+    - `test_app_integration.py`: Tests for the complete flow from uploading an image to generating flashcards
+    - `images/`: Test images used by the integration tests
+  - `unit/`: Unit tests for application components
+  - `test_auth.py`: Authentication tests (references backend_service tests)
+  - `test_refresh_token.py`: Refresh token tests (references backend_service tests)
 
-- `backend_service/tests/`: Tests for the backend service
-  - `unit/`: Unit tests that mock dependencies and test individual components in isolation
-  - `integration/`: Integration tests that test multiple components together
+- `backend_service/tests/`: Backend service tests
+  - `unit/`: Unit tests for backend service components
+    - `test_auth_service.py`: Tests for authentication service
+    - `test_deck_service.py`: Tests for deck service
+    - `test_flashcard_service.py`: Tests for flashcard service
+  - `integration/`: Integration tests for backend service components
+    - `test_flashcards.py`: Tests for flashcard generation flow
   - `conftest.py`: Contains fixtures for the tests
   - `test_auth.py`: Tests for authentication endpoints
   - `test_refresh_token.py`: Tests for refresh token functionality

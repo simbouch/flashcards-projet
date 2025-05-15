@@ -11,6 +11,9 @@ The tests are organized as follows:
   - `test_auth.py`: Tests for authentication endpoints
   - `test_refresh_token.py`: Tests for refresh token functionality
   - `unit/`: Unit tests that mock dependencies
+    - `test_auth_service.py`: Tests for authentication service
+    - `test_deck_service.py`: Tests for deck service
+    - `test_flashcard_service.py`: Tests for flashcard service
   - `integration/`: Integration tests that test multiple components
     - `test_flashcards.py`: Tests for flashcard functionality
 
@@ -183,6 +186,65 @@ engine = create_engine(
 4. **Use Fixtures Wisely**: Create fixtures for common test data and operations.
 
 5. **Follow AAA Pattern**: Arrange, Act, Assert - structure your tests in this way for clarity.
+
+## Addressing Deprecation Warnings
+
+The codebase has been updated to address several deprecation warnings:
+
+1. **Pydantic Validators**: Updated from `@validator` to `@field_validator` with `@classmethod` decorator:
+
+```python
+# Old approach
+@validator('username')
+def username_alphanumeric(cls, v):
+    # validation logic
+    return v
+
+# New approach
+@field_validator('username')
+@classmethod
+def username_alphanumeric(cls, v):
+    # validation logic
+    return v
+```
+
+2. **FastAPI Event Handlers**: Updated from `@app.on_event` to lifespan events:
+
+```python
+# Old approach
+@app.on_event("startup")
+async def startup_event():
+    # startup logic
+
+# New approach
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup logic
+    yield
+    # shutdown logic
+
+app = FastAPI(lifespan=lifespan)
+```
+
+3. **SQLAlchemy Imports**: Updated to use `declarative_base` from `sqlalchemy.orm`:
+
+```python
+# Old approach
+from sqlalchemy.ext.declarative import declarative_base
+
+# New approach
+from sqlalchemy.orm import declarative_base
+```
+
+4. **Datetime UTC Functions**: Updated from `datetime.utcnow()` to `datetime.now(UTC)`:
+
+```python
+# Old approach
+expire = datetime.utcnow() + expires_delta
+
+# New approach
+expire = datetime.now(UTC) + expires_delta
+```
 
 ## Conclusion
 

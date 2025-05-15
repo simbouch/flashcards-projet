@@ -1,6 +1,8 @@
-# Unit Tests
+# Application Unit Tests
 
-This directory contains unit tests for the application. Unit tests focus on testing individual components in isolation, mocking any dependencies.
+This directory contains unit tests for the application-level components. Unit tests focus on testing individual components in isolation, mocking any dependencies.
+
+**Note**: Most unit tests are now located in their respective service directories (e.g., `backend_service/tests/unit/`). This directory is reserved for application-level unit tests that don't belong to a specific service.
 
 ## Writing Unit Tests
 
@@ -21,10 +23,10 @@ def test_create_access_token():
     # Arrange
     user_id = 1
     expires_delta = timedelta(minutes=15)
-    
+
     # Act
     token = create_access_token({"sub": str(user_id)}, expires_delta)
-    
+
     # Assert
     assert token is not None
     assert isinstance(token, str)
