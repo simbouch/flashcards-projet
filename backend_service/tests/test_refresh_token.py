@@ -6,6 +6,9 @@ from datetime import datetime, timedelta
 
 from db_module import crud, schemas
 
+# Mark all tests in this file as auth tests
+pytestmark = [pytest.mark.auth, pytest.mark.integration]
+
 # Note: We're using the fixtures from conftest.py instead of defining our own
 # This ensures consistent test database setup across all tests
 

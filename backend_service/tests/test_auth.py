@@ -4,6 +4,9 @@ Tests for authentication endpoints.
 import pytest
 from db_module import crud
 
+# Mark all tests in this file as auth tests
+pytestmark = [pytest.mark.auth, pytest.mark.integration]
+
 def test_login(client, test_user):
     """Test login endpoint."""
     # Test with correct credentials

@@ -62,11 +62,16 @@ def test_ocr_service():
     return response.json()["text"]
 
 
-def test_llm_service(text):
+@pytest.fixture
+def extracted_text():
+    """Extract text from the test image."""
+    return test_ocr_service()
+
+def test_llm_service(extracted_text):
     """Test the LLM service."""
     # Generate flashcards from the text
     data = {
-        "text": text,
+        "text": extracted_text,
         "task": "flashcards"
     }
     response = requests.post(f"{LLM_SERVICE_URL}/generate", json=data)
@@ -209,11 +214,18 @@ def main():
         # Test OCR service
         text = test_ocr_service()
 
-        # Test LLM service
-        flashcards = test_llm_service(text)
+        # Create data for LLM service test
+        data = {
+            "text": text,
+            "task": "flashcards"
+        }
+        response = requests.post(f"{LLM_SERVICE_URL}/generate", json=data)
+        assert response.status_code == 200, "LLM service failed to generate flashcards"
+        assert "flashcards" in response.json(), "LLM service response does not contain flashcards"
+        print(f"✅ LLM service generated {len(response.json()['flashcards'])} flashcards")
 
         # Test backend service
-        backend_flashcards = test_backend_service()
+        test_backend_service()
 
         print("\n✅ All integration tests passed!")
         return 0

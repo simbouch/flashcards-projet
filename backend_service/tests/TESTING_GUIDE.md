@@ -6,10 +6,13 @@ This document provides guidance on running tests for the backend service and exp
 
 The tests are organized as follows:
 
-- `backend_service/tests/`: Tests for the backend service
-  - `conftest.py`: Contains fixtures for the tests
+- `backend_service/tests/`: Root directory for all backend service tests
+  - `conftest.py`: Contains shared fixtures for all tests
   - `test_auth.py`: Tests for authentication endpoints
   - `test_refresh_token.py`: Tests for refresh token functionality
+  - `unit/`: Unit tests that mock dependencies
+  - `integration/`: Integration tests that test multiple components
+    - `test_flashcards.py`: Tests for flashcard functionality
 
 ## Running Tests
 
@@ -19,11 +22,24 @@ To run all tests:
 python -m pytest
 ```
 
-To run specific tests:
+To run specific test files:
 
 ```bash
 python -m pytest tests/test_auth.py
 python -m pytest tests/test_refresh_token.py
+```
+
+To run tests by category:
+
+```bash
+# Run only unit tests
+python -m pytest tests/unit/
+
+# Run only integration tests
+python -m pytest tests/integration/
+
+# Run tests with specific markers
+python -m pytest -m "auth"
 ```
 
 ## Test Database Configuration
@@ -80,9 +96,9 @@ def db_session(prepare_database):
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
-    
+
     yield session
-    
+
     session.close()
     transaction.rollback()
     connection.close()
@@ -101,12 +117,12 @@ def client(db_session):
             yield db_session
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
-    
+
     with TestClient(app) as test_client:
         yield test_client
-    
+
     app.dependency_overrides.clear()
 ```
 

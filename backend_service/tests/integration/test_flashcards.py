@@ -1,6 +1,14 @@
+"""
+Integration test for the flashcards functionality.
+This test simulates a complete flow from uploading an image to generating flashcards.
+"""
+import pytest
 import requests
 import json
 import sys
+
+# Mark this test as a flashcards integration test
+pytestmark = [pytest.mark.flashcards, pytest.mark.integration]
 
 def login(username, password):
     """Login to the backend service and get an access token."""

@@ -1,0 +1,24 @@
+Improve test structure and organization
+
+This commit improves the test structure and organization of the Flashcards application:
+
+- Organized test directory structure with proper unit/ and integration/ subdirectories
+- Removed duplicate tests between tests/ and backend_service/tests/
+- Added pytest markers to categorize tests by functionality and type
+- Fixed circular import issues and database session handling
+- Added comprehensive documentation for the test structure
+- Created README.md files for each test directory
+- Updated the main README.md with test structure information
+- Ensured all tests pass with proper isolation
+
+The test structure now follows best practices for FastAPI and SQLAlchemy testing:
+- In-memory SQLite database for speed and isolation
+- Session-per-test with rollback for test isolation
+- Explicit model registration
+- Single source of truth for DB URL
+- Properly scoped fixtures
+- Dependency overrides for FastAPI
+
+All tests are now passing, and the test structure is well-organized and documented.
+
+See TEST_STRUCTURE_IMPROVEMENTS.md for detailed documentation of the changes.

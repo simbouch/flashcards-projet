@@ -65,13 +65,43 @@ The application follows a microservices architecture with the following componen
 ### Running Tests
 
 ```bash
-# Run backend tests
+# Run all tests
 pytest
+
+# Run tests by category
+pytest -m auth
+pytest -m decks
+pytest -m flashcards
+pytest -m study
+pytest -m unit
+pytest -m integration
+
+# Run tests for specific services
+pytest backend_service/tests
+pytest db_module/tests
+pytest ocr_service/tests
+pytest llm_service/tests
 
 # Run frontend tests
 cd frontend_service
 npm run test:unit
 ```
+
+### Test Structure
+
+The tests are organized as follows:
+
+- `tests/`: Application-level tests
+  - `integration/`: Integration tests for the entire application
+  - `unit/`: Unit tests for application components
+
+- `backend_service/tests/`: Backend service tests
+  - `unit/`: Unit tests for backend service components
+  - `integration/`: Integration tests for backend service components
+
+- `db_module/tests/`: Database module tests
+- `ocr_service/tests/`: OCR service tests
+- `llm_service/tests/`: LLM service tests
 
 ### Building Docker Images
 

@@ -1,108 +1,101 @@
 """
-Pytest configuration for backend service tests.
+Pytest configuration for tests.
+
+This module implements best practices for testing FastAPI applications with SQLAlchemy:
+1. Centralizes model registration
+2. Uses a single test database configuration
+3. Creates/tears down tables exactly once per session
+4. Provides a fresh, rollback-wrapped session per test
+5. Properly overrides FastAPI's get_db dependency
 """
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-import uuid
 from datetime import datetime, timedelta
 
 from backend_service.src.main import app
-from db_module.database import get_db, Base
-import db_module.models  # Import all models to ensure they're registered with Base
+from db_module.database import get_db
+# Import the centralized Base that includes all models
+from db_module.base import Base
 from db_module import crud, schemas
 
-# Create a test client
-@pytest.fixture
-def client():
-    """Create a test client."""
-    return TestClient(app)
+# Define a single test database URL
+SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
 
-# Create a test database session
-@pytest.fixture
-def test_db():
-    """Get a test database session."""
-    # Use in-memory SQLite for tests
-    SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+# Create a single engine for all tests
+engine = create_engine(
+    SQLALCHEMY_TEST_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+    # Uncomment to see SQL statements for debugging
+    # echo=True
+)
 
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+# Create a sessionmaker for test sessions
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    # Create all tables in the database
+@pytest.fixture(scope="session", autouse=True)
+def prepare_database():
+    """Create all tables once at the beginning of the test session.
+
+    This fixture runs automatically and ensures tables are created exactly once.
+    """
+    # Create all tables
     Base.metadata.create_all(bind=engine)
 
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = TestingSessionLocal()
+    yield
 
-    try:
-        yield db
-    finally:
-        db.close()
+    # Drop all tables at the end of the test session
+    Base.metadata.drop_all(bind=engine)
 
-# Override the dependency to use the test database
-@pytest.fixture(autouse=True)
-def db_override(monkeypatch, test_db):
-    """Override the database dependency."""
+@pytest.fixture(scope="function")
+def db_session(prepare_database):
+    """Yield a fresh database session for each test.
+
+    This fixture creates a new transaction for each test and rolls it back
+    after the test completes, ensuring test isolation.
+    """
+    # Connect to the engine
+    connection = engine.connect()
+    # Begin a transaction
+    transaction = connection.begin()
+    # Create a session bound to this connection
+    session = TestingSessionLocal(bind=connection)
+
+    yield session
+
+    # Close and rollback after the test
+    session.close()
+    transaction.rollback()
+    connection.close()
+
+@pytest.fixture(scope="function")
+def client(db_session):
+    """Create a test client with dependency overrides.
+
+    This fixture overrides the get_db dependency to use our test session.
+    """
     # Override the get_db dependency
     def override_get_db():
         try:
-            yield test_db
+            yield db_session
         finally:
             pass
 
-    # Create all tables in the database
-    from db_module.database import Base
-    import db_module.models  # Import all models to ensure they're registered with Base
+    # Set the override before creating the client
+    app.dependency_overrides[get_db] = override_get_db
 
-    # Get the engine from the test_db session
-    engine = test_db.get_bind()
+    # Create and yield the client
+    with TestClient(app) as test_client:
+        yield test_client
 
-    # Create all tables in the database
-    Base.metadata.create_all(bind=engine)
-
-    # Create a test user in the database
-    from db_module import crud, schemas
-    user_data = schemas.UserCreate(
-        email="test@example.com",
-        username="testuser",
-        password="Password123",
-        full_name="Test User"
-    )
-
-    # Check if user already exists
-    existing_user = crud.get_user_by_email(test_db, user_data.email)
-    if not existing_user:
-        # Create new user
-        crud.create_user(test_db, user_data)
-
-    # Override both the database module's get_db and the API's get_db
-    monkeypatch.setattr("db_module.database.get_db", override_get_db)
-    monkeypatch.setattr("backend_service.src.api.deps.get_db", override_get_db)
-
-    # Also override the app's dependency directly
-    from backend_service.src.main import app
-    from fastapi import Depends
-
-    # Get the original route dependencies
-    for route in app.routes:
-        if hasattr(route, "dependencies"):
-            # Replace any dependency that uses get_db with our test_db
-            for i, dependency in enumerate(route.dependencies):
-                if hasattr(dependency, "dependency") and dependency.dependency.__name__ == "get_db":
-                    # Create a new dependency that uses our test_db
-                    route.dependencies[i] = Depends(override_get_db)
-
-    # Return the test_db for convenience
-    return test_db
+    # Clear the override after the test
+    app.dependency_overrides.clear()
 
 @pytest.fixture
-def test_user(test_db):
+def test_user(db_session):
     """Create a test user."""
     user_data = schemas.UserCreate(
         email="test@example.com",
@@ -111,16 +104,19 @@ def test_user(test_db):
         full_name="Test User"
     )
 
-    # Check if user already exists
-    existing_user = crud.get_user_by_email(test_db, user_data.email)
+    # Check if user already exists to avoid duplicate key errors
+    existing_user = crud.get_user_by_email(db_session, user_data.email)
     if existing_user:
         return existing_user
 
     # Create new user
-    return crud.create_user(test_db, user_data)
+    user = crud.create_user(db_session, user_data)
+    return user
 
 @pytest.fixture
-def test_refresh_token(test_db, test_user):
+def test_refresh_token(db_session, test_user):
     """Create a test refresh token."""
-    # Create a refresh token with default expiration
-    return crud.create_refresh_token(test_db, test_user.id)
+    # Create a refresh token with 7 days expiration
+    expires_delta = timedelta(days=7)
+    db_refresh_token = crud.create_refresh_token(db_session, test_user.id, expires_delta)
+    return db_refresh_token

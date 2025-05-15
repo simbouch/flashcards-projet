@@ -1,14 +1,27 @@
 # Backend Service Tests
 
-This directory contains tests for the backend service.
+This directory contains tests for the backend service of the Flashcards application.
 
 ## Test Structure
 
-The tests are organized as follows:
+The tests are organized into the following directories:
 
-- `conftest.py`: Contains fixtures for the tests
+- `unit/`: Unit tests that mock dependencies and test individual components in isolation
+- `integration/`: Integration tests that test multiple components together
+- `conftest.py`: Pytest configuration and fixtures for the tests
 - `test_auth.py`: Tests for authentication endpoints
 - `test_refresh_token.py`: Tests for refresh token functionality
+
+## Test Categories
+
+Tests are categorized using pytest markers:
+
+- `auth`: Tests related to authentication
+- `decks`: Tests related to decks
+- `flashcards`: Tests related to flashcards
+- `study`: Tests related to study sessions
+- `unit`: Unit tests that mock dependencies
+- `integration`: Integration tests that test multiple components
 
 ## Issues and Solutions
 
@@ -75,10 +88,28 @@ def db_override(monkeypatch, test_db):
 
 ## Running the Tests
 
-To run the tests, use the following command:
+To run all tests:
 
 ```bash
-python -m pytest tests
+python -m pytest
+```
+
+To run tests by category:
+
+```bash
+python -m pytest -m auth
+python -m pytest -m decks
+python -m pytest -m flashcards
+python -m pytest -m study
+python -m pytest -m unit
+python -m pytest -m integration
+```
+
+To run tests by directory:
+
+```bash
+python -m pytest backend_service/tests/unit
+python -m pytest backend_service/tests/integration
 ```
 
 ## Troubleshooting
