@@ -1,7 +1,7 @@
 """
 Pydantic schemas for API validation and serialization.
 """
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, timedelta
 import re
@@ -30,9 +30,7 @@ class RefreshTokenInDB(BaseModel):
     revoked: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-        orm_mode = True  # Keep for backward compatibility
+    model_config = ConfigDict(from_attributes=True)
 
 class RefreshToken(RefreshTokenInDB):
     pass
@@ -78,9 +76,7 @@ class UserInDB(UserBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-        orm_mode = True  # Keep for backward compatibility
+    model_config = ConfigDict(from_attributes=True)
 
 class User(UserInDB):
     pass
@@ -106,9 +102,7 @@ class DocumentInDB(DocumentBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-        orm_mode = True  # Keep for backward compatibility
+    model_config = ConfigDict(from_attributes=True)
 
 class Document(DocumentInDB):
     pass
@@ -125,9 +119,7 @@ class ExtractedTextInDB(ExtractedTextBase):
     document_id: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-        orm_mode = True  # Keep for backward compatibility
+    model_config = ConfigDict(from_attributes=True)
 
 class ExtractedText(ExtractedTextInDB):
     pass
@@ -153,9 +145,7 @@ class DeckInDB(DeckBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-        orm_mode = True  # Keep for backward compatibility
+    model_config = ConfigDict(from_attributes=True)
 
 class Deck(DeckInDB):
     pass
@@ -181,9 +171,7 @@ class FlashcardInDB(FlashcardBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-        orm_mode = True  # Keep for backward compatibility
+    model_config = ConfigDict(from_attributes=True)
 
 class Flashcard(FlashcardInDB):
     pass
@@ -204,9 +192,7 @@ class StudySessionInDB(StudySessionBase):
     started_at: datetime
     ended_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-        orm_mode = True  # Keep for backward compatibility
+    model_config = ConfigDict(from_attributes=True)
 
 class StudySession(StudySessionInDB):
     pass
@@ -227,9 +213,7 @@ class StudyRecordInDB(StudyRecordBase):
     interval: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-        orm_mode = True  # Keep for backward compatibility
+    model_config = ConfigDict(from_attributes=True)
 
 class StudyRecord(StudyRecordInDB):
     pass

@@ -5,8 +5,9 @@ import requests
 import time
 import sys
 
-# Global variable to store test credentials
+# Global variables to store test data
 test_credentials = None
+access_token = None
 
 def test_ocr_service():
     """Test the OCR service."""
@@ -16,13 +17,13 @@ def test_ocr_service():
         response = requests.get("http://localhost:8000/docs")
         if response.status_code == 200:
             print("✅ OCR service is running")
-            return True
+            assert True
         else:
             print("❌ OCR service is not running correctly")
-            return False
+            assert False
     except requests.exceptions.ConnectionError:
         print("❌ OCR service is not running")
-        return False
+        assert False
 
 def test_llm_service():
     """Test the LLM service."""
@@ -31,13 +32,13 @@ def test_llm_service():
         response = requests.get("http://localhost:8001/health")
         if response.status_code == 200 and response.json().get("status") == "ok":
             print("✅ LLM service is running")
-            return True
+            assert True
         else:
             print("❌ LLM service is not running correctly")
-            return False
+            assert False
     except requests.exceptions.ConnectionError:
         print("❌ LLM service is not running")
-        return False
+        assert False
 
 def test_backend_service():
     """Test the backend service."""
@@ -46,13 +47,13 @@ def test_backend_service():
         response = requests.get("http://localhost:8002/health")
         if response.status_code == 200 and response.json().get("status") == "ok":
             print("✅ Backend service is running")
-            return True
+            assert True
         else:
             print("❌ Backend service is not running correctly")
-            return False
+            assert False
     except requests.exceptions.ConnectionError:
         print("❌ Backend service is not running")
-        return False
+        assert False
 
 def test_frontend_service():
     """Test the frontend service."""
@@ -61,13 +62,13 @@ def test_frontend_service():
         response = requests.get("http://localhost:8080")
         if response.status_code == 200:
             print("✅ Frontend service is running")
-            return True
+            assert True
         else:
             print("❌ Frontend service is not running correctly")
-            return False
+            assert False
     except requests.exceptions.ConnectionError:
         print("❌ Frontend service is not running")
-        return False
+        assert False
 
 def test_user_registration():
     """Test user registration."""
@@ -96,13 +97,13 @@ def test_user_registration():
                 "username": username,
                 "password": "Password123"
             }
-            return True
+            assert True
         else:
             print(f"❌ User registration failed: {response.json()}")
-            return False
+            assert False
     except requests.exceptions.ConnectionError:
         print("❌ Backend service is not running")
-        return False
+        assert False
 
 def test_user_login():
     """Test user login."""
@@ -112,7 +113,7 @@ def test_user_login():
         global test_credentials
         if not test_credentials:
             print("❌ No test credentials available. Registration test must run first.")
-            return None
+            assert False
 
         response = requests.post(
             "http://localhost:8002/api/v1/auth/login",
@@ -120,45 +121,40 @@ def test_user_login():
         )
         if response.status_code == 200 and "access_token" in response.json():
             print("✅ User login works")
-            return response.json()["access_token"]
+            # Store the token in a global variable for future tests
+            global access_token
+            access_token = response.json()["access_token"]
+            assert True
         else:
             print(f"❌ User login failed: {response.json()}")
-            return None
+            assert False
     except requests.exceptions.ConnectionError:
         print("❌ Backend service is not running")
-        return None
+        assert False
 
 def main():
     """Run all tests."""
     print("Starting tests...")
 
-    # Test services
-    ocr_ok = test_ocr_service()
-    llm_ok = test_llm_service()
-    backend_ok = test_backend_service()
-    frontend_ok = test_frontend_service()
+    try:
+        # Test services
+        test_ocr_service()
+        test_llm_service()
+        test_backend_service()
+        test_frontend_service()
 
-    if not (ocr_ok and llm_ok and backend_ok and frontend_ok):
-        print("\n❌ Some services are not running. Please check the logs.")
+        # Test user registration and login
+        test_user_registration()
+
+        # Wait a bit for the database to update
+        time.sleep(1)
+
+        test_user_login()
+
+        print("\n✅ All tests passed! The application is working correctly.")
+    except AssertionError:
+        print("\n❌ Some tests failed. Please check the logs.")
         sys.exit(1)
-
-    # Test user registration and login
-    registration_ok = test_user_registration()
-
-    if not registration_ok:
-        print("\n❌ User registration failed. Please check the logs.")
-        sys.exit(1)
-
-    # Wait a bit for the database to update
-    time.sleep(1)
-
-    token = test_user_login()
-
-    if not token:
-        print("\n❌ User login failed. Please check the logs.")
-        sys.exit(1)
-
-    print("\n✅ All tests passed! The application is working correctly.")
 
 if __name__ == "__main__":
     main()

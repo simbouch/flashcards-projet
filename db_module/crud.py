@@ -65,7 +65,7 @@ def update_user(db: Session, user_id: str, user_update: schemas.UserUpdate) -> O
     """Update a user."""
     db_user = get_user(db, user_id)
     if db_user:
-        update_data = user_update.dict(exclude_unset=True)
+        update_data = user_update.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(db_user, key, value)
         db.commit()
@@ -183,7 +183,7 @@ def update_deck(db: Session, deck_id: str, deck_update: schemas.DeckUpdate) -> O
     """Update a deck."""
     db_deck = get_deck(db, deck_id)
     if db_deck:
-        update_data = deck_update.dict(exclude_unset=True)
+        update_data = deck_update.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(db_deck, key, value)
         db.commit()
@@ -240,7 +240,7 @@ def update_flashcard(db: Session, flashcard_id: str, flashcard_update: schemas.F
     """Update a flashcard."""
     db_flashcard = get_flashcard(db, flashcard_id)
     if db_flashcard:
-        update_data = flashcard_update.dict(exclude_unset=True)
+        update_data = flashcard_update.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(db_flashcard, key, value)
         db.commit()

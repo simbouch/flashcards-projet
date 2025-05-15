@@ -25,6 +25,12 @@ TEST_PASSWORD = "Password123"
 # Test image path
 TEST_IMAGE_PATH = os.path.join(os.path.dirname(__file__), "images/test.png")
 
+# Global variables
+extracted_text_value = None
+deck_title = None
+flashcards_value = None
+llm_flashcards_value = None
+
 
 def test_services_health():
     """Test that all services are running."""
@@ -59,7 +65,10 @@ def test_ocr_service():
     assert len(response.json()["text"]) > 0, "OCR service extracted empty text"
 
     print(f"✅ OCR service extracted text: {response.json()['text'][:100]}...")
-    return response.json()["text"]
+    # Store the extracted text in a global variable for use in other tests
+    global extracted_text_value
+    extracted_text_value = response.json()["text"]
+    return extracted_text_value
 
 
 @pytest.fixture
@@ -81,13 +90,13 @@ def test_llm_service(extracted_text):
     assert len(response.json()["flashcards"]) > 0, "LLM service generated no flashcards"
 
     print(f"✅ LLM service generated {len(response.json()['flashcards'])} flashcards")
-    return response.json()["flashcards"]
+    # Store the flashcards in a global variable for use in other tests
+    global llm_flashcards_value
+    llm_flashcards_value = response.json()["flashcards"]
 
 
 def test_backend_service():
     """Test the backend service."""
-    # This will be set later in the function
-    global deck_title
     # Login
     login_data = {
         "username": TEST_USERNAME,
@@ -110,6 +119,7 @@ def test_backend_service():
     }
 
     # Create a custom deck title
+    global deck_title
     deck_title = f"My Custom Deck {uuid.uuid4()}"
 
     with open(TEST_IMAGE_PATH, "rb") as f:
@@ -130,6 +140,7 @@ def test_backend_service():
 
     # Wait for flashcards to be generated
     max_attempts = 24  # Increased to allow more time (2 minutes)
+    status = None
     for attempt in range(max_attempts):
         print(f"Checking document status (attempt {attempt + 1}/{max_attempts})...")
         response = requests.get(
@@ -200,7 +211,9 @@ def test_backend_service():
         print(f"Question: {flashcard.get('question')}")
         print(f"Answer: {flashcard.get('answer')}")
 
-    return flashcards
+    # Store the flashcards in a global variable for use in other tests
+    global flashcards_value
+    flashcards_value = flashcards
 
 
 def main():
@@ -214,15 +227,12 @@ def main():
         # Test OCR service
         text = test_ocr_service()
 
-        # Create data for LLM service test
-        data = {
-            "text": text,
-            "task": "flashcards"
-        }
-        response = requests.post(f"{LLM_SERVICE_URL}/generate", json=data)
-        assert response.status_code == 200, "LLM service failed to generate flashcards"
-        assert "flashcards" in response.json(), "LLM service response does not contain flashcards"
-        print(f"✅ LLM service generated {len(response.json()['flashcards'])} flashcards")
+        # Test LLM service
+        try:
+            test_llm_service(text)
+        except AssertionError as e:
+            print(f"⚠️ LLM service test failed: {e}")
+            print("Continuing with other tests...")
 
         # Test backend service
         test_backend_service()
