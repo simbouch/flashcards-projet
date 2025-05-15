@@ -15,7 +15,7 @@
                 Create Deck
               </v-btn>
             </v-card-title>
-            
+
             <v-card-text>
               <v-alert
                 v-if="decksStore.error"
@@ -25,7 +25,7 @@
               >
                 {{ decksStore.error }}
               </v-alert>
-              
+
               <v-row v-if="decksStore.loading">
                 <v-col cols="12" class="text-center">
                   <v-progress-circular
@@ -34,7 +34,7 @@
                   ></v-progress-circular>
                 </v-col>
               </v-row>
-              
+
               <v-row v-else-if="decksStore.decks.length === 0">
                 <v-col cols="12" class="text-center">
                   <p>You don't have any flashcard decks yet.</p>
@@ -47,7 +47,7 @@
                   </v-btn>
                 </v-col>
               </v-row>
-              
+
               <v-row v-else>
                 <v-col
                   v-for="deck in decksStore.decks"
@@ -72,17 +72,17 @@
                         Public
                       </v-chip>
                     </v-card-title>
-                    
+
                     <v-card-subtitle v-if="deck.description">
                       {{ deck.description }}
                     </v-card-subtitle>
-                    
+
                     <v-card-text>
                       <div class="text-caption">
                         Created: {{ formatDate(deck.created_at) }}
                       </div>
                     </v-card-text>
-                    
+
                     <v-card-actions>
                       <v-btn
                         text
@@ -92,16 +92,16 @@
                         <v-icon left>mdi-book-open-variant</v-icon>
                         Study
                       </v-btn>
-                      
+
                       <v-spacer></v-spacer>
-                      
+
                       <v-btn
                         icon
                         @click.stop="editDeck(deck)"
                       >
                         <v-icon>mdi-pencil</v-icon>
                       </v-btn>
-                      
+
                       <v-btn
                         icon
                         @click.stop="deleteDeck(deck)"
@@ -113,11 +113,20 @@
                 </v-col>
               </v-row>
             </v-card-text>
+            <v-card-actions>
+              <v-btn
+                color="secondary"
+                @click="goToMain"
+              >
+                <v-icon left>mdi-arrow-left</v-icon>
+                Back to Main
+              </v-btn>
+            </v-card-actions>
           </v-card>
         </v-col>
       </v-row>
     </v-container>
-    
+
     <!-- Create/Edit Deck Dialog -->
     <v-dialog
       v-model="showCreateDialog"
@@ -127,7 +136,7 @@
         <v-card-title class="text-h5">
           {{ editMode ? 'Edit Deck' : 'Create New Deck' }}
         </v-card-title>
-        
+
         <v-card-text>
           <v-form ref="deckForm">
             <v-text-field
@@ -136,19 +145,19 @@
               required
               :rules="[v => !!v || 'Title is required']"
             ></v-text-field>
-            
+
             <v-textarea
               v-model="deckForm.description"
               label="Description"
               rows="3"
             ></v-textarea>
-            
+
             <v-switch
               v-model="deckForm.is_public"
               label="Make this deck public"
               color="primary"
             ></v-switch>
-            
+
             <v-select
               v-if="!editMode"
               v-model="deckForm.document_id"
@@ -160,7 +169,7 @@
             ></v-select>
           </v-form>
         </v-card-text>
-        
+
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn
@@ -180,7 +189,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    
+
     <!-- Delete Confirmation Dialog -->
     <v-dialog
       v-model="showDeleteDialog"
@@ -190,14 +199,14 @@
         <v-card-title class="text-h5">
           Confirm Delete
         </v-card-title>
-        
+
         <v-card-text>
           Are you sure you want to delete the deck
           <strong>{{ selectedDeck?.title }}</strong>?
           This will also delete all flashcards in this deck.
           This action cannot be undone.
         </v-card-text>
-        
+
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn
@@ -260,25 +269,25 @@ export default {
     async fetchDecks() {
       await this.decksStore.fetchDecks()
     },
-    
+
     async fetchDocuments() {
       await this.documentsStore.fetchDocuments()
     },
-    
+
     formatDate(dateString) {
       if (!dateString) return ''
       const date = new Date(dateString)
       return date.toLocaleString()
     },
-    
+
     viewDeck(deck) {
       this.$router.push(`/decks/${deck.id}`)
     },
-    
+
     studyDeck(deck) {
       this.$router.push(`/study/${deck.id}`)
     },
-    
+
     editDeck(deck) {
       this.editMode = true
       this.selectedDeck = deck
@@ -289,12 +298,12 @@ export default {
       }
       this.showCreateDialog = true
     },
-    
+
     deleteDeck(deck) {
       this.selectedDeck = deck
       this.showDeleteDialog = true
     },
-    
+
     resetForm() {
       this.editMode = false
       this.selectedDeck = null
@@ -308,12 +317,12 @@ export default {
         this.$refs.deckForm.reset()
       }
     },
-    
+
     async saveDeck() {
       // Validate form
       if (this.$refs.deckForm.validate()) {
         this.saving = true
-        
+
         try {
           if (this.editMode) {
             // Update existing deck
@@ -322,7 +331,7 @@ export default {
             // Create new deck
             await this.decksStore.createDeck(this.deckForm)
           }
-          
+
           this.showCreateDialog = false
           this.resetForm()
         } catch (error) {
@@ -332,12 +341,12 @@ export default {
         }
       }
     },
-    
+
     async confirmDelete() {
       if (!this.selectedDeck) return
-      
+
       this.deleting = true
-      
+
       try {
         await this.decksStore.deleteDeck(this.selectedDeck.id)
         this.showDeleteDialog = false
@@ -346,6 +355,10 @@ export default {
       } finally {
         this.deleting = false
       }
+    },
+
+    goToMain() {
+      this.$router.push('/')
     }
   }
 }

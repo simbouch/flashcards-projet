@@ -15,7 +15,7 @@
                 Upload Document
               </v-btn>
             </v-card-title>
-            
+
             <v-card-text>
               <v-alert
                 v-if="documentsStore.error"
@@ -25,7 +25,7 @@
               >
                 {{ documentsStore.error }}
               </v-alert>
-              
+
               <v-data-table
                 :headers="headers"
                 :items="documentsStore.documents"
@@ -42,38 +42,49 @@
                     {{ formatStatus(item.status) }}
                   </v-chip>
                 </template>
-                
+
                 <template v-slot:item.created_at="{ item }">
                   {{ formatDate(item.created_at) }}
                 </template>
-                
+
                 <template v-slot:item.actions="{ item }">
                   <v-btn
-                    icon
+                    color="primary"
                     small
                     @click="viewDocument(item)"
                     :disabled="!isProcessingComplete(item)"
-                    title="View Document"
+                    class="mr-2"
                   >
-                    <v-icon>mdi-eye</v-icon>
+                    <v-icon left>mdi-eye</v-icon>
+                    View Document
                   </v-btn>
-                  
+
                   <v-btn
-                    icon
+                    color="error"
                     small
                     @click="deleteDocument(item)"
-                    title="Delete Document"
+                    class="ml-2"
                   >
-                    <v-icon>mdi-delete</v-icon>
+                    <v-icon left>mdi-delete</v-icon>
+                    Delete
                   </v-btn>
                 </template>
               </v-data-table>
             </v-card-text>
+            <v-card-actions>
+              <v-btn
+                color="secondary"
+                @click="goToMain"
+              >
+                <v-icon left>mdi-arrow-left</v-icon>
+                Back to Main
+              </v-btn>
+            </v-card-actions>
           </v-card>
         </v-col>
       </v-row>
     </v-container>
-    
+
     <!-- Upload Dialog -->
     <v-dialog
       v-model="showUploadDialog"
@@ -83,7 +94,7 @@
         <v-card-title class="text-h5">
           Upload Document
         </v-card-title>
-        
+
         <v-card-text>
           <v-file-input
             v-model="fileToUpload"
@@ -93,7 +104,7 @@
             show-size
             :rules="[v => !!v || 'Please select a file to upload']"
           ></v-file-input>
-          
+
           <v-alert
             v-if="uploadError"
             type="error"
@@ -103,7 +114,7 @@
             {{ uploadError }}
           </v-alert>
         </v-card-text>
-        
+
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn
@@ -124,7 +135,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    
+
     <!-- View Document Dialog -->
     <v-dialog
       v-model="showViewDialog"
@@ -134,14 +145,14 @@
         <v-card-title class="text-h5">
           {{ selectedDocument.filename }}
         </v-card-title>
-        
+
         <v-card-text>
           <v-tabs v-model="activeTab">
             <v-tab>Document Info</v-tab>
             <v-tab>Extracted Text</v-tab>
             <v-tab>Generated Flashcards</v-tab>
           </v-tabs>
-          
+
           <v-tabs-items v-model="activeTab">
             <v-tab-item>
               <v-list>
@@ -151,7 +162,7 @@
                     <v-list-item-subtitle>{{ selectedDocument.filename }}</v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
-                
+
                 <v-list-item>
                   <v-list-item-content>
                     <v-list-item-title>Status</v-list-item-title>
@@ -165,14 +176,14 @@
                     </v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
-                
+
                 <v-list-item>
                   <v-list-item-content>
                     <v-list-item-title>Uploaded</v-list-item-title>
                     <v-list-item-subtitle>{{ formatDate(selectedDocument.created_at) }}</v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
-                
+
                 <v-list-item v-if="selectedDocument.error_message">
                   <v-list-item-content>
                     <v-list-item-title>Error</v-list-item-title>
@@ -181,7 +192,7 @@
                 </v-list-item>
               </v-list>
             </v-tab-item>
-            
+
             <v-tab-item>
               <div v-if="extractedText" class="pa-4">
                 <pre class="extracted-text">{{ extractedText.content }}</pre>
@@ -195,7 +206,7 @@
                 <p v-else>No text extracted yet.</p>
               </div>
             </v-tab-item>
-            
+
             <v-tab-item>
               <div v-if="flashcards && flashcards.length > 0" class="pa-4">
                 <v-card
@@ -219,7 +230,7 @@
             </v-tab-item>
           </v-tabs-items>
         </v-card-text>
-        
+
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn
@@ -232,7 +243,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    
+
     <!-- Delete Confirmation Dialog -->
     <v-dialog
       v-model="showDeleteDialog"
@@ -242,13 +253,13 @@
         <v-card-title class="text-h5">
           Confirm Delete
         </v-card-title>
-        
+
         <v-card-text>
           Are you sure you want to delete this document?
           <strong>{{ selectedDocument?.filename }}</strong>
           This action cannot be undone.
         </v-card-text>
-        
+
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn
@@ -310,21 +321,21 @@ export default {
     async fetchDocuments() {
       await this.documentsStore.fetchDocuments()
     },
-    
+
     formatDate(dateString) {
       if (!dateString) return ''
       const date = new Date(dateString)
       return date.toLocaleString()
     },
-    
+
     formatStatus(status) {
       if (!status) return ''
       return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
     },
-    
+
     getStatusColor(status) {
       if (!status) return 'grey'
-      
+
       const statusMap = {
         'uploaded': 'blue',
         'ocr_processing': 'amber',
@@ -333,23 +344,23 @@ export default {
         'flashcard_complete': 'green',
         'error': 'red'
       }
-      
+
       return statusMap[status] || 'grey'
     },
-    
+
     isProcessingComplete(document) {
       return document.status === 'flashcard_complete' || document.status === 'error'
     },
-    
+
     async uploadDocument() {
       if (!this.fileToUpload) {
         this.uploadError = 'Please select a file to upload'
         return
       }
-      
+
       this.uploading = true
       this.uploadError = null
-      
+
       try {
         await this.documentsStore.uploadDocument(this.fileToUpload)
         this.showUploadDialog = false
@@ -360,14 +371,14 @@ export default {
         this.uploading = false
       }
     },
-    
+
     async viewDocument(document) {
       this.selectedDocument = document
       this.showViewDialog = true
       this.activeTab = 0
       this.extractedText = null
       this.flashcards = []
-      
+
       // Fetch extracted text when tab is changed to text
       this.$watch('activeTab', async (newVal) => {
         if (newVal === 1 && !this.extractedText) {
@@ -377,12 +388,12 @@ export default {
         }
       })
     },
-    
+
     async fetchExtractedText() {
       if (!this.selectedDocument) return
-      
+
       this.loadingText = true
-      
+
       try {
         const response = await documentsAPI.getDocumentText(this.selectedDocument.id)
         this.extractedText = response.data
@@ -392,12 +403,12 @@ export default {
         this.loadingText = false
       }
     },
-    
+
     async fetchFlashcards() {
       if (!this.selectedDocument) return
-      
+
       this.loadingFlashcards = true
-      
+
       try {
         // Find decks associated with this document
         const decksResponse = await this.documentsStore.fetchDocument(this.selectedDocument.id)
@@ -413,25 +424,39 @@ export default {
         this.loadingFlashcards = false
       }
     },
-    
+
     deleteDocument(document) {
       this.selectedDocument = document
       this.showDeleteDialog = true
     },
-    
+
     async confirmDelete() {
       if (!this.selectedDocument) return
-      
+
       this.deleting = true
-      
+
       try {
-        await this.documentsStore.deleteDocument(this.selectedDocument.id)
-        this.showDeleteDialog = false
+        const result = await this.documentsStore.deleteDocument(this.selectedDocument.id)
+
+        if (result) {
+          console.log(`Successfully deleted document: ${this.selectedDocument.id}`)
+          this.showDeleteDialog = false
+          // Refresh the documents list
+          await this.documentsStore.fetchDocuments()
+        } else {
+          console.error('Failed to delete document: API returned false')
+          this.documentsStore.error = 'Failed to delete document. Please try again.'
+        }
       } catch (error) {
         console.error('Failed to delete document:', error)
+        this.documentsStore.error = error.message || 'Failed to delete document. Please try again.'
       } finally {
         this.deleting = false
       }
+    },
+
+    goToMain() {
+      this.$router.push('/')
     }
   }
 }

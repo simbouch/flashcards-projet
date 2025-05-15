@@ -64,6 +64,8 @@ export const useAuthStore = defineStore('auth', {
         const response = await authAPI.getProfile()
         this.user = response.data
         localStorage.setItem('user', JSON.stringify(response.data))
+        // Store userId in localStorage for other stores to use
+        localStorage.setItem('userId', response.data.id)
         this.loading = false
         return response.data
       } catch (error) {
@@ -106,6 +108,7 @@ export const useAuthStore = defineStore('auth', {
         localStorage.removeItem('token')
         localStorage.removeItem('refreshToken')
         localStorage.removeItem('user')
+        localStorage.removeItem('userId')
       }
     },
 

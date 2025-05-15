@@ -150,6 +150,16 @@ def get_extracted_text_by_document(db: Session, document_id: str) -> Optional[mo
     """Get extracted text by document ID."""
     return db.query(models.ExtractedText).filter(models.ExtractedText.document_id == document_id).first()
 
+def delete_extracted_text(db: Session, extracted_text_id: str) -> bool:
+    """Delete extracted text."""
+    db_extracted_text = db.query(models.ExtractedText).filter(models.ExtractedText.id == extracted_text_id).first()
+    if db_extracted_text:
+        db.delete(db_extracted_text)
+        db.commit()
+        logger.info(f"Deleted extracted text: {extracted_text_id}")
+        return True
+    return False
+
 # Deck CRUD operations
 def create_deck(db: Session, deck: schemas.DeckCreate, owner_id: str) -> models.Deck:
     """Create a new deck."""

@@ -17,7 +17,7 @@
                 style="max-width: 300px"
               ></v-text-field>
             </v-card-title>
-            
+
             <v-card-text>
               <v-alert
                 v-if="decksStore.error"
@@ -27,7 +27,7 @@
               >
                 {{ decksStore.error }}
               </v-alert>
-              
+
               <v-row v-if="decksStore.loading">
                 <v-col cols="12" class="text-center">
                   <v-progress-circular
@@ -36,13 +36,13 @@
                   ></v-progress-circular>
                 </v-col>
               </v-row>
-              
+
               <v-row v-else-if="filteredDecks.length === 0">
                 <v-col cols="12" class="text-center">
                   <p>No public decks found.</p>
                 </v-col>
               </v-row>
-              
+
               <v-row v-else>
                 <v-col
                   v-for="deck in filteredDecks"
@@ -66,11 +66,11 @@
                         Public
                       </v-chip>
                     </v-card-title>
-                    
+
                     <v-card-subtitle v-if="deck.description">
                       {{ deck.description }}
                     </v-card-subtitle>
-                    
+
                     <v-card-text>
                       <div class="text-caption">
                         Created: {{ formatDate(deck.created_at) }}
@@ -79,7 +79,7 @@
                         By: {{ deck.owner ? deck.owner.username : 'Unknown' }}
                       </div>
                     </v-card-text>
-                    
+
                     <v-card-actions>
                       <v-btn
                         text
@@ -89,9 +89,9 @@
                         <v-icon left>mdi-book-open-variant</v-icon>
                         Study
                       </v-btn>
-                      
+
                       <v-spacer></v-spacer>
-                      
+
                       <v-btn
                         v-if="isAuthenticated"
                         icon
@@ -105,11 +105,20 @@
                 </v-col>
               </v-row>
             </v-card-text>
+            <v-card-actions>
+              <v-btn
+                color="secondary"
+                @click="goToMain"
+              >
+                <v-icon left>mdi-arrow-left</v-icon>
+                Back to Main
+              </v-btn>
+            </v-card-actions>
           </v-card>
         </v-col>
       </v-row>
     </v-container>
-    
+
     <!-- Clone Deck Dialog -->
     <v-dialog
       v-model="showCloneDialog"
@@ -119,13 +128,13 @@
         <v-card-title class="text-h5">
           Clone Deck
         </v-card-title>
-        
+
         <v-card-text>
           <p>
             You are about to clone the deck <strong>{{ selectedDeck?.title }}</strong> to your personal collection.
             You can customize the title and description below.
           </p>
-          
+
           <v-form ref="cloneForm">
             <v-text-field
               v-model="cloneForm.title"
@@ -133,13 +142,13 @@
               required
               :rules="[v => !!v || 'Title is required']"
             ></v-text-field>
-            
+
             <v-textarea
               v-model="cloneForm.description"
               label="Description"
               rows="3"
             ></v-textarea>
-            
+
             <v-switch
               v-model="cloneForm.is_public"
               label="Make this deck public"
@@ -147,7 +156,7 @@
             ></v-switch>
           </v-form>
         </v-card-text>
-        
+
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn
@@ -195,14 +204,14 @@ export default {
   },
   computed: {
     ...mapState(useAuthStore, ['isAuthenticated']),
-    
+
     filteredDecks() {
       if (!this.search) {
         return this.decksStore.publicDecks
       }
-      
+
       const searchLower = this.search.toLowerCase()
-      return this.decksStore.publicDecks.filter(deck => 
+      return this.decksStore.publicDecks.filter(deck =>
         deck.title.toLowerCase().includes(searchLower) ||
         (deck.description && deck.description.toLowerCase().includes(searchLower))
       )
@@ -215,27 +224,27 @@ export default {
     async fetchPublicDecks() {
       await this.decksStore.fetchPublicDecks()
     },
-    
+
     formatDate(dateString) {
       if (!dateString) return ''
       const date = new Date(dateString)
       return date.toLocaleString()
     },
-    
+
     viewDeck(deck) {
       this.$router.push(`/decks/${deck.id}`)
     },
-    
+
     studyDeck(deck) {
       this.$router.push(`/study/${deck.id}`)
     },
-    
+
     cloneDeck(deck) {
       if (!this.isAuthenticated) {
         this.$router.push('/login')
         return
       }
-      
+
       this.selectedDeck = deck
       this.cloneForm = {
         title: `Copy of ${deck.title}`,
@@ -244,20 +253,20 @@ export default {
       }
       this.showCloneDialog = true
     },
-    
+
     async confirmClone() {
       if (!this.selectedDeck || !this.$refs.cloneForm.validate()) return
-      
+
       this.cloning = true
-      
+
       try {
         // Create a new deck
         const newDeck = await this.decksStore.createDeck(this.cloneForm)
-        
+
         if (newDeck) {
           // Fetch flashcards from the original deck
           await this.flashcardsStore.fetchFlashcards(this.selectedDeck.id)
-          
+
           // Clone each flashcard to the new deck
           for (const card of this.flashcardsStore.flashcards) {
             await this.flashcardsStore.createFlashcard({
@@ -266,7 +275,7 @@ export default {
               deck_id: newDeck.id
             })
           }
-          
+
           // Show success message and redirect to the new deck
           this.showCloneDialog = false
           this.$router.push(`/decks/${newDeck.id}`)
@@ -276,6 +285,10 @@ export default {
       } finally {
         this.cloning = false
       }
+    },
+
+    goToMain() {
+      this.$router.push('/')
     }
   }
 }

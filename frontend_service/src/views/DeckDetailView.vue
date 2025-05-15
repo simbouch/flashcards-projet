@@ -334,7 +334,6 @@ export default {
     isSystemDeck() {
       // Check if this is a system deck (public native deck)
       const result = this.deck &&
-             this.deck.is_public &&
              this.deck.owner_id &&
              this.deck.owner_id.includes('system');
 
@@ -347,9 +346,34 @@ export default {
       });
 
       return result;
+    },
+
+    isOwner() {
+      if (!this.deck || !this.deck.owner_id) return false;
+
+      const userId = this.decksStore.userId || localStorage.getItem('userId');
+      const result = this.deck.owner_id === userId;
+
+      console.log(`isOwner check for deck ${this.deck?.title}:`, {
+        deckOwnerId: this.deck.owner_id,
+        userId: userId,
+        result: result
+      });
+
+      return result;
     }
   },
   created() {
+    // Set userId from localStorage if not already set
+    if (!this.decksStore.userId && localStorage.getItem('userId')) {
+      this.decksStore.userId = localStorage.getItem('userId')
+    }
+
+    console.log('DeckDetailView created with userId:', {
+      storeUserId: this.decksStore.userId,
+      localStorageUserId: localStorage.getItem('userId')
+    })
+
     this.fetchDeck()
   },
   methods: {
@@ -360,7 +384,13 @@ export default {
         const deck = await this.decksStore.fetchDeck(this.id)
 
         if (deck) {
-          console.log(`Successfully fetched deck: ${deck.title} with ${deck.flashcards?.length || 0} flashcards`)
+          console.log(`Successfully fetched deck: ${deck.title} with ${deck.flashcards?.length || 0} flashcards`, {
+            deckOwnerId: deck.owner_id,
+            storeUserId: this.decksStore.userId,
+            localStorageUserId: localStorage.getItem('userId'),
+            isOwner: deck.owner_id === this.decksStore.userId || deck.owner_id === localStorage.getItem('userId'),
+            isSystemDeck: this.isSystemDeck
+          })
         } else {
           console.log('Trying to fetch as public deck...')
           // Fetch public decks if not already loaded
@@ -514,15 +544,23 @@ export default {
       this.deletingDeck = true
 
       try {
-        await this.decksStore.deleteDeck(this.id)
+        const result = await this.decksStore.deleteDeck(this.id)
 
-        // Navigate back to decks list after successful deletion
-        this.$router.push('/decks')
+        if (result) {
+          console.log(`Successfully deleted deck: ${this.id}`)
+          // Close the dialog before navigation
+          this.showDeleteDeckDialog = false
+          // Navigate back to decks list after successful deletion
+          this.$router.push('/decks')
+        } else {
+          console.error('Failed to delete deck: API returned false')
+          this.decksStore.error = 'Failed to delete deck. Please try again.'
+        }
       } catch (error) {
         console.error('Failed to delete deck:', error)
+        this.decksStore.error = error.message || 'Failed to delete deck. Please try again.'
       } finally {
         this.deletingDeck = false
-        this.showDeleteDeckDialog = false
       }
     }
   }
