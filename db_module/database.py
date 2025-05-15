@@ -10,7 +10,10 @@ import sys
 
 # Configure logger
 # Use a shared logs directory that both services can access
-log_dir = Path("/app/logs")
+# Determine the log directory based on environment
+# In Docker, logs should go to /app/logs
+# In development, logs should go to ./logs
+log_dir = Path("/app/logs" if os.path.exists("/app/logs") else "./logs")
 log_dir.mkdir(exist_ok=True, parents=True)
 
 logger.remove()
@@ -19,16 +22,23 @@ logger.add(
     level="DEBUG",
     format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 )
-# Only log to stdout to avoid permission issues
-# logger.add(
-#     str(log_dir / "db_{time:YYYY-MM-DD}.log"),
-#     level="DEBUG",
-#     rotation="00:00",
-#     retention="7 days",
-#     backtrace=True,
-#     diagnose=True,
-#     enqueue=True
-# )
+
+# Add file logging with proper error handling
+try:
+    log_file = str(log_dir / "db_{time:YYYY-MM-DD}.log")
+    logger.add(
+        log_file,
+        level="DEBUG",
+        rotation="00:00",
+        retention="7 days",
+        backtrace=True,
+        diagnose=True,
+        enqueue=True
+    )
+    logger.info(f"DB module logging to file: {log_file}")
+except Exception as e:
+    logger.warning(f"Could not set up file logging for DB module: {str(e)}")
+    logger.info("Continuing with stdout logging only")
 
 # Get database URL from environment or use default SQLite file
 SQLALCHEMY_DATABASE_URL = os.getenv(
