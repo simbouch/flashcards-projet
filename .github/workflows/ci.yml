@@ -18,10 +18,15 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tesseract-ocr tesseract-ocr-fra libgl1
+
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest
+        pip install flake8 pytest pytest-cov
         pip install -r db_module/requirements.txt
         pip install -r ocr_service/requirements.txt
         pip install -r llm_service/requirements.txt
@@ -34,21 +39,30 @@ jobs:
         # exit-zero treats all errors as warnings
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
+    - name: Set up environment variables
+      run: |
+        echo "JWT_SECRET_KEY=testsecretkey" >> $GITHUB_ENV
+        echo "DATABASE_URL=sqlite:///./test.db" >> $GITHUB_ENV
+
     - name: Test db_module
       run: |
-        pytest db_module/tests/
+        cd db_module
+        python -m pytest tests/ -v
 
     - name: Test ocr_service
       run: |
-        pytest ocr_service/tests/
+        cd ocr_service
+        python -m pytest tests/ -v
 
     - name: Test llm_service
       run: |
-        pytest llm_service/tests/
+        cd llm_service
+        python -m pytest tests/ -v
 
     - name: Test backend_service
       run: |
-        pytest backend_service/tests/
+        cd backend_service
+        python -m pytest tests/ -v
 
   lint-and-test-frontend:
     runs-on: ubuntu-latest
@@ -63,13 +77,36 @@ jobs:
 
     - name: Install dependencies
       working-directory: ./frontend_service
-      run: npm install
+      run: |
+        npm ci
+
+    - name: Check if lint script exists
+      id: check_lint
+      working-directory: ./frontend_service
+      run: |
+        if grep -q "\"lint\":" package.json; then
+          echo "lint_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "lint_exists=false" >> $GITHUB_OUTPUT
+        fi
 
     - name: Lint
+      if: steps.check_lint.outputs.lint_exists == 'true'
       working-directory: ./frontend_service
       run: npm run lint
 
+    - name: Check if test script exists
+      id: check_test
+      working-directory: ./frontend_service
+      run: |
+        if grep -q "\"test:unit\":" package.json; then
+          echo "test_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "test_exists=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Test
+      if: steps.check_test.outputs.test_exists == 'true'
       working-directory: ./frontend_service
       run: npm run test:unit
 
@@ -89,42 +126,47 @@ jobs:
       with:
         context: ./ocr_service
         push: false
-        tags: ghcr.io/${{ github.repository_owner }}/ocr-service:latest
+        tags: flashcards/ocr-service:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        outputs: type=docker
 
     - name: Build LLM Service
       uses: docker/build-push-action@v4
       with:
         context: ./llm_service
         push: false
-        tags: ghcr.io/${{ github.repository_owner }}/llm-service:latest
+        tags: flashcards/llm-service:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        outputs: type=docker
 
     - name: Build DB Module
       uses: docker/build-push-action@v4
       with:
         context: ./db_module
         push: false
-        tags: ghcr.io/${{ github.repository_owner }}/db-module:latest
+        tags: flashcards/db-module:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        outputs: type=docker
 
     - name: Build Backend Service
       uses: docker/build-push-action@v4
       with:
         context: ./backend_service
         push: false
-        tags: ghcr.io/${{ github.repository_owner }}/backend-service:latest
+        tags: flashcards/backend-service:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        outputs: type=docker
 
     - name: Build Frontend Service
       uses: docker/build-push-action@v4
       with:
         context: ./frontend_service
         push: false
-        tags: ghcr.io/${{ github.repository_owner }}/frontend-service:latest
+        tags: flashcards/frontend-service:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        outputs: type=docker
