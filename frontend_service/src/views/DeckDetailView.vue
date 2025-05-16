@@ -47,7 +47,7 @@
                     <v-btn
                       color="grey darken-1"
                       @click="goBack"
-                      class="mr-2"
+                      class="mr-2 mb-2"
                     >
                       <v-icon left>mdi-arrow-left</v-icon>
                       Back
@@ -57,17 +57,26 @@
                       color="primary"
                       @click="startStudySession"
                       :disabled="!deck.flashcards || deck.flashcards.length === 0"
-                      class="mr-2"
+                      class="mr-2 mb-2"
                     >
                       <v-icon left>mdi-book-open-variant</v-icon>
                       Study
                     </v-btn>
 
                     <v-btn
+                      color="amber darken-2"
+                      to="/study-history"
+                      class="mr-2 mb-2"
+                    >
+                      <v-icon left>mdi-history</v-icon>
+                      Study History
+                    </v-btn>
+
+                    <v-btn
                       color="secondary"
                       @click="showAddCardDialog = true"
                       v-if="!isSystemDeck"
-                      class="mr-2"
+                      class="mr-2 mb-2"
                     >
                       <v-icon left>mdi-plus</v-icon>
                       Add Card
@@ -77,6 +86,7 @@
                       color="error"
                       @click="confirmDeleteDeck"
                       v-if="!isSystemDeck"
+                      class="mb-2"
                     >
                       <v-icon left>mdi-delete</v-icon>
                       Delete Deck

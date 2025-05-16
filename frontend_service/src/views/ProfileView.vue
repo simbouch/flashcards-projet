@@ -7,7 +7,7 @@
             <v-card-title class="text-h5">
               My Profile
             </v-card-title>
-            
+
             <v-card-text>
               <v-alert
                 v-if="authStore.error"
@@ -17,7 +17,7 @@
               >
                 {{ authStore.error }}
               </v-alert>
-              
+
               <v-alert
                 v-if="successMessage"
                 type="success"
@@ -26,7 +26,7 @@
               >
                 {{ successMessage }}
               </v-alert>
-              
+
               <v-form @submit.prevent="updateProfile" ref="form">
                 <v-text-field
                   v-model="profileForm.email"
@@ -40,7 +40,7 @@
                   prepend-icon="mdi-email"
                   :disabled="!editMode"
                 ></v-text-field>
-                
+
                 <v-text-field
                   v-model="profileForm.username"
                   label="Username"
@@ -48,16 +48,16 @@
                   prepend-icon="mdi-account"
                   disabled
                 ></v-text-field>
-                
+
                 <v-text-field
                   v-model="profileForm.full_name"
                   label="Full Name"
                   prepend-icon="mdi-account-details"
                   :disabled="!editMode"
                 ></v-text-field>
-                
+
                 <v-divider class="my-4"></v-divider>
-                
+
                 <v-expansion-panels v-if="editMode">
                   <v-expansion-panel>
                     <v-expansion-panel-header>
@@ -73,7 +73,7 @@
                           v => !changePassword || !!v || 'Current password is required to change password'
                         ]"
                       ></v-text-field>
-                      
+
                       <v-text-field
                         v-model="passwordForm.new_password"
                         label="New Password"
@@ -87,7 +87,7 @@
                           v => !changePassword || /[0-9]/.test(v) || 'Password must contain at least one number'
                         ]"
                       ></v-text-field>
-                      
+
                       <v-text-field
                         v-model="passwordForm.confirm_password"
                         label="Confirm New Password"
@@ -98,7 +98,7 @@
                           v => !changePassword || v === passwordForm.new_password || 'Passwords do not match'
                         ]"
                       ></v-text-field>
-                      
+
                       <v-checkbox
                         v-model="changePassword"
                         label="I want to change my password"
@@ -109,10 +109,10 @@
                 </v-expansion-panels>
               </v-form>
             </v-card-text>
-            
+
             <v-card-actions>
               <v-spacer></v-spacer>
-              
+
               <template v-if="editMode">
                 <v-btn
                   color="grey darken-1"
@@ -121,7 +121,7 @@
                 >
                   Cancel
                 </v-btn>
-                
+
                 <v-btn
                   color="primary"
                   @click="updateProfile"
@@ -130,7 +130,7 @@
                   Save
                 </v-btn>
               </template>
-              
+
               <v-btn
                 v-else
                 color="primary"
@@ -140,12 +140,12 @@
               </v-btn>
             </v-card-actions>
           </v-card>
-          
+
           <v-card class="mt-6">
             <v-card-title class="text-h5">
               Account Statistics
             </v-card-title>
-            
+
             <v-card-text>
               <v-row>
                 <v-col cols="12" sm="4">
@@ -154,14 +154,14 @@
                     <div class="text-subtitle-1">Documents</div>
                   </v-card>
                 </v-col>
-                
+
                 <v-col cols="12" sm="4">
                   <v-card outlined class="text-center pa-4">
                     <div class="text-h4 primary--text">{{ stats.decks }}</div>
                     <div class="text-subtitle-1">Decks</div>
                   </v-card>
                 </v-col>
-                
+
                 <v-col cols="12" sm="4">
                   <v-card outlined class="text-center pa-4">
                     <div class="text-h4 primary--text">{{ stats.flashcards }}</div>
@@ -169,7 +169,7 @@
                   </v-card>
                 </v-col>
               </v-row>
-              
+
               <v-row class="mt-4">
                 <v-col cols="12" sm="6">
                   <v-card outlined class="text-center pa-4">
@@ -177,7 +177,7 @@
                     <div class="text-subtitle-1">Study Sessions</div>
                   </v-card>
                 </v-col>
-                
+
                 <v-col cols="12" sm="6">
                   <v-card outlined class="text-center pa-4">
                     <div class="text-h4 primary--text">{{ stats.cardsStudied }}</div>
@@ -185,22 +185,32 @@
                   </v-card>
                 </v-col>
               </v-row>
+
+              <div class="text-center mt-4">
+                <v-btn
+                  color="primary"
+                  to="/study-history"
+                >
+                  <v-icon left>mdi-history</v-icon>
+                  View Study History
+                </v-btn>
+              </div>
             </v-card-text>
           </v-card>
-          
+
           <v-card class="mt-6">
             <v-card-title class="text-h5">
               Privacy & Data
             </v-card-title>
-            
+
             <v-card-text>
               <p>
                 Your data is stored securely and is only used to provide the flashcard service.
                 We do not share your personal information with third parties.
               </p>
-              
+
               <v-divider class="my-4"></v-divider>
-              
+
               <v-btn
                 color="error"
                 outlined
@@ -208,7 +218,7 @@
               >
                 Delete My Account
               </v-btn>
-              
+
               <v-btn
                 color="primary"
                 outlined
@@ -222,7 +232,7 @@
         </v-col>
       </v-row>
     </v-container>
-    
+
     <!-- Delete Account Dialog -->
     <v-dialog
       v-model="showDeleteAccountDialog"
@@ -232,13 +242,13 @@
         <v-card-title class="text-h5">
           Delete Account
         </v-card-title>
-        
+
         <v-card-text>
           <p>
             Are you sure you want to delete your account? This action cannot be undone.
             All your data, including documents, decks, and flashcards will be permanently deleted.
           </p>
-          
+
           <v-text-field
             v-model="deleteAccountPassword"
             label="Enter your password to confirm"
@@ -246,7 +256,7 @@
             required
           ></v-text-field>
         </v-card-text>
-        
+
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn
@@ -267,7 +277,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    
+
     <!-- Export Data Dialog -->
     <v-dialog
       v-model="showExportDataDialog"
@@ -277,44 +287,44 @@
         <v-card-title class="text-h5">
           Export My Data
         </v-card-title>
-        
+
         <v-card-text>
           <p>
             You can export all your data in JSON format. This includes:
           </p>
-          
+
           <ul>
             <li>Your profile information</li>
             <li>Your documents and extracted text</li>
             <li>Your flashcard decks</li>
             <li>Your study history</li>
           </ul>
-          
+
           <v-checkbox
             v-model="exportOptions"
             label="Profile Information"
             value="profile"
           ></v-checkbox>
-          
+
           <v-checkbox
             v-model="exportOptions"
             label="Documents & Extracted Text"
             value="documents"
           ></v-checkbox>
-          
+
           <v-checkbox
             v-model="exportOptions"
             label="Flashcard Decks"
             value="decks"
           ></v-checkbox>
-          
+
           <v-checkbox
             v-model="exportOptions"
             label="Study History"
             value="study"
           ></v-checkbox>
         </v-card-text>
-        
+
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn
@@ -387,7 +397,7 @@ export default {
   methods: {
     async loadUserProfile() {
       const user = this.authStore.currentUser
-      
+
       if (user) {
         this.profileForm = {
           email: user.email,
@@ -397,7 +407,7 @@ export default {
       } else {
         await this.authStore.fetchUserProfile()
         const updatedUser = this.authStore.currentUser
-        
+
         if (updatedUser) {
           this.profileForm = {
             email: updatedUser.email,
@@ -407,16 +417,16 @@ export default {
         }
       }
     },
-    
+
     async loadStats() {
       // Load documents
       await this.documentsStore.fetchDocuments()
       this.stats.documents = this.documentsStore.documents.length
-      
+
       // Load decks
       await this.decksStore.fetchDecks()
       this.stats.decks = this.decksStore.decks.length
-      
+
       // Count flashcards
       let flashcardCount = 0
       for (const deck of this.decksStore.decks) {
@@ -425,11 +435,11 @@ export default {
         }
       }
       this.stats.flashcards = flashcardCount
-      
+
       // Load study sessions
       await this.studyStore.fetchStudySessions()
       this.stats.studySessions = this.studyStore.sessions.length
-      
+
       // Count cards studied
       let cardsStudied = 0
       for (const session of this.studyStore.sessions) {
@@ -438,11 +448,11 @@ export default {
       }
       this.stats.cardsStudied = cardsStudied
     },
-    
+
     startEdit() {
       this.editMode = true
     },
-    
+
     cancelEdit() {
       this.editMode = false
       this.loadUserProfile()
@@ -453,76 +463,76 @@ export default {
       }
       this.changePassword = false
     },
-    
+
     async updateProfile() {
       if (!this.editMode) return
-      
+
       // Validate form
       if (!this.$refs.form.validate()) return
-      
+
       // Prepare update data
       const updateData = {
         email: this.profileForm.email,
         full_name: this.profileForm.full_name
       }
-      
+
       // Update profile
       const success = await this.authStore.updateProfile(updateData)
-      
+
       if (success) {
         this.successMessage = 'Profile updated successfully'
         this.editMode = false
       }
     },
-    
+
     async deleteAccount() {
       if (!this.deleteAccountPassword) return
-      
+
       this.deletingAccount = true
-      
+
       // TODO: Implement account deletion
       // This would require a backend endpoint
-      
+
       this.deletingAccount = false
       this.showDeleteAccountDialog = false
     },
-    
+
     async exportData() {
       if (this.exportOptions.length === 0) return
-      
+
       this.exporting = true
-      
+
       // Prepare export data
       const exportData = {}
-      
+
       if (this.exportOptions.includes('profile')) {
         exportData.profile = this.authStore.currentUser
       }
-      
+
       if (this.exportOptions.includes('documents')) {
         exportData.documents = this.documentsStore.documents
       }
-      
+
       if (this.exportOptions.includes('decks')) {
         exportData.decks = this.decksStore.decks
       }
-      
+
       if (this.exportOptions.includes('study')) {
         exportData.studySessions = this.studyStore.sessions
         exportData.studyRecords = this.studyStore.records
       }
-      
+
       // Create and download JSON file
       const dataStr = JSON.stringify(exportData, null, 2)
       const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr)
-      
+
       const exportFileDefaultName = 'flashcards-data.json'
-      
+
       const linkElement = document.createElement('a')
       linkElement.setAttribute('href', dataUri)
       linkElement.setAttribute('download', exportFileDefaultName)
       linkElement.click()
-      
+
       this.exporting = false
       this.showExportDataDialog = false
     }

@@ -9,6 +9,7 @@ import DeckDetailView from '../views/DeckDetailView.vue'
 import PublicDecksView from '../views/PublicDecksView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import StudyView from '../views/StudyView.vue'
+import StudyHistoryView from '../views/StudyHistoryView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 
 const routes = [
@@ -63,6 +64,12 @@ const routes = [
     name: 'study',
     component: StudyView,
     props: true
+  },
+  {
+    path: '/study-history',
+    name: 'study-history',
+    component: StudyHistoryView,
+    meta: { requiresAuth: true }
   },
   {
     path: '/:pathMatch(.*)*',
