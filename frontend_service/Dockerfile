@@ -14,6 +14,8 @@ COPY .eslintrc.js babel.config.js vue.config.js ./
 
 # Copy project files and build
 COPY . .
+# Fix permissions for vue-cli-service
+RUN chmod +x node_modules/.bin/vue-cli-service
 # Disable ESLint during build
 RUN npm run build -- --no-lint
 
