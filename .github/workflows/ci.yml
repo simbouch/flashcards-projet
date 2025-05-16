@@ -1,3 +1,17 @@
+# Flashcards Project CI Workflow
+#
+# This workflow runs linting, testing, and Docker builds for the Flashcards application.
+# It's optimized for speed and efficiency with:
+# - Dependency caching for faster builds
+# - Selective testing based on changed files
+# - Parallel Docker builds
+# - Runs on both main and dev branches
+#
+# The workflow consists of three main jobs:
+# 1. Backend testing (Python services)
+# 2. Frontend testing (Vue.js)
+# 3. Docker image building (all services)
+
 name: CI
 
 on:
@@ -9,9 +23,22 @@ on:
 jobs:
   lint-and-test-backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # Set a timeout to prevent hung jobs
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetch all history for file change detection
+
+    - name: Get changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v41
+      with:
+        files: |
+          db_module/**
+          ocr_service/**
+          llm_service/**
+          backend_service/**
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -22,6 +49,14 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y tesseract-ocr tesseract-ocr-fra libgl1
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
 
     - name: Install Python dependencies
       run: |
@@ -46,37 +81,62 @@ jobs:
         echo "DATABASE_URL=sqlite:///./test.db" >> $GITHUB_ENV
 
     - name: Test db_module
+      if: steps.changed-files.outputs.any_changed == 'true' && contains(steps.changed-files.outputs.all_changed_files, 'db_module/')
       run: |
         cd db_module
         python -m pytest tests/ -v
 
     - name: Test ocr_service
+      if: steps.changed-files.outputs.any_changed == 'true' && contains(steps.changed-files.outputs.all_changed_files, 'ocr_service/')
       run: |
         cd ocr_service
         python -m pytest tests/ -v
 
     - name: Test llm_service
+      if: steps.changed-files.outputs.any_changed == 'true' && contains(steps.changed-files.outputs.all_changed_files, 'llm_service/')
       run: |
         cd llm_service
         python -m pytest tests/ -v
 
     - name: Test backend_service
+      if: steps.changed-files.outputs.any_changed == 'true' && contains(steps.changed-files.outputs.all_changed_files, 'backend_service/')
       run: |
         cd backend_service
         python -m pytest tests/ -v
 
   lint-and-test-frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # Set a timeout to prevent hung jobs
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetch all history for file change detection
+
+    - name: Get changed frontend files
+      id: changed-frontend-files
+      uses: tj-actions/changed-files@v41
+      with:
+        files: |
+          frontend_service/**
 
     - name: Set up Node.js
+      if: steps.changed-frontend-files.outputs.any_changed == 'true'
       uses: actions/setup-node@v3
       with:
         node-version: '16'
 
+    - name: Cache Node modules
+      if: steps.changed-frontend-files.outputs.any_changed == 'true'
+      uses: actions/cache@v3
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
     - name: Install dependencies
+      if: steps.changed-frontend-files.outputs.any_changed == 'true'
       working-directory: ./frontend_service
       run: |
         npm ci
@@ -84,6 +144,7 @@ jobs:
         npm install @vue/cli-service --no-save
 
     - name: Check if lint script exists
+      if: steps.changed-frontend-files.outputs.any_changed == 'true'
       id: check_lint
       working-directory: ./frontend_service
       run: |
@@ -94,11 +155,12 @@ jobs:
         fi
 
     - name: Lint
-      if: steps.check_lint.outputs.lint_exists == 'true'
+      if: steps.changed-frontend-files.outputs.any_changed == 'true' && steps.check_lint.outputs.lint_exists == 'true'
       working-directory: ./frontend_service
       run: npm run lint || true  # Continue even if linting fails
 
     - name: Check if test script exists
+      if: steps.changed-frontend-files.outputs.any_changed == 'true'
       id: check_test
       working-directory: ./frontend_service
       run: |
@@ -109,14 +171,19 @@ jobs:
         fi
 
     - name: Test
-      if: steps.check_test.outputs.test_exists == 'true'
+      if: steps.changed-frontend-files.outputs.any_changed == 'true' && steps.check_test.outputs.test_exists == 'true'
       working-directory: ./frontend_service
       run: npm run test:unit || true  # Continue even if tests fail
 
   build-docker-images:
     runs-on: ubuntu-latest
+    timeout-minutes: 20  # Set a timeout to prevent hung jobs
     needs: [lint-and-test-backend, lint-and-test-frontend]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [ocr_service, llm_service, db_module, backend_service, frontend_service]
 
     steps:
     - uses: actions/checkout@v3
@@ -124,52 +191,12 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Build OCR Service
+    - name: Build ${{ matrix.service }}
       uses: docker/build-push-action@v4
       with:
-        context: ./ocr_service
+        context: ./${{ matrix.service }}
         push: false
-        tags: flashcards/ocr-service:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        outputs: type=docker
-
-    - name: Build LLM Service
-      uses: docker/build-push-action@v4
-      with:
-        context: ./llm_service
-        push: false
-        tags: flashcards/llm-service:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        outputs: type=docker
-
-    - name: Build DB Module
-      uses: docker/build-push-action@v4
-      with:
-        context: ./db_module
-        push: false
-        tags: flashcards/db-module:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        outputs: type=docker
-
-    - name: Build Backend Service
-      uses: docker/build-push-action@v4
-      with:
-        context: ./backend_service
-        push: false
-        tags: flashcards/backend-service:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        outputs: type=docker
-
-    - name: Build Frontend Service
-      uses: docker/build-push-action@v4
-      with:
-        context: ./frontend_service
-        push: false
-        tags: flashcards/frontend-service:latest
+        tags: flashcards/${{ matrix.service }}:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
         outputs: type=docker

@@ -34,7 +34,7 @@
                 class="elevation-1"
                 :no-data-text="documentsStore.loading ? 'Loading documents...' : 'No documents found'"
               >
-                <template v-slot:item.status="{ item }">
+                <template #[`item.status`]="{ item }">
                   <v-chip
                     :color="getStatusColor(item.status)"
                     small
@@ -43,11 +43,11 @@
                   </v-chip>
                 </template>
 
-                <template v-slot:item.created_at="{ item }">
+                <template #[`item.created_at`]="{ item }">
                   {{ formatDate(item.created_at) }}
                 </template>
 
-                <template v-slot:item.actions="{ item }">
+                <template #[`item.actions`]="{ item }">
                   <v-btn
                     color="primary"
                     small
