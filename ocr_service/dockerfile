@@ -2,12 +2,13 @@
 
 FROM python:3.10-slim
 
-# Installer Tesseract (fra) + Poppler pour pdf2image + libgl1 pour Pillow
+# Installer Tesseract (fra) + Poppler pour pdf2image + libgl1 pour Pillow + curl pour health check
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         tesseract-ocr \
         tesseract-ocr-fra \
-        libgl1 && \
+        libgl1 \
+        curl && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

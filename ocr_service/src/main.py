@@ -21,3 +21,6 @@ async def extract_text(file: UploadFile = File(...)):
         logger.exception("OCR failure")
         raise HTTPException(500, f"Erreur OCR : {e}")
     return {"text": text}
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
