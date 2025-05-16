@@ -15,7 +15,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
-    # Disable health check for now
+    # PRODUCTION: Enable health checks for better reliability and monitoring
     # healthcheck:
     #   test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
     #   interval: 30s
@@ -39,7 +39,7 @@ services:
       - PYTHONUNBUFFERED=1
       - MODEL_NAME=bigscience/bloom-560m
     restart: unless-stopped
-    # Disable health check for now
+    # PRODUCTION: Enable health checks for better reliability and monitoring
     # healthcheck:
     #   test: ["CMD", "curl", "-f", "http://localhost:8001/docs"]
     #   interval: 30s
@@ -89,6 +89,8 @@ services:
       - OCR_SERVICE_URL=http://ocr-service:8000
       - LLM_SERVICE_URL=http://llm-service:8001
       - DATABASE_URL=sqlite:///./data/flashcards.db
+      # PRODUCTION: Use a strong, randomly generated secret key stored securely
+      # PRODUCTION: Consider using environment variables or a secrets manager
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-supersecretkey}
       - JWT_ALGORITHM=HS256
       - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -98,6 +100,13 @@ services:
       - llm-service
       - db-service
     restart: unless-stopped
+    # PRODUCTION: Consider adding resource limits similar to the LLM service
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 2G
+    #     reservations:
+    #       memory: 1G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 30s

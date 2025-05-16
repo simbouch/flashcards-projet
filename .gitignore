@@ -1,5 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+*/__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -60,6 +62,15 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+
+# Log files and directories
+logs/
+*/logs/
+**/logs/
+
+# Uploads directory - exclude everything except README
+uploads/*
+!uploads/README.md
 
 # Flask stuff:
 instance/
