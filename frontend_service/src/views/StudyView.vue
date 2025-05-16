@@ -353,7 +353,7 @@ export default {
 
         // If deck not found, check if it's a public deck
         if (!deck && this.decksStore.error) {
-          console.log('Trying to fetch as public deck...')
+          // Try to fetch as public deck
           // Fetch public decks if not already loaded
           if (this.decksStore.publicDecks.length === 0) {
             await this.decksStore.fetchPublicDecks()
@@ -368,18 +368,16 @@ export default {
             // Set the current deck to the copy of the public deck
             this.decksStore.currentDeck = publicDeckCopy
 
-            console.log(`Found public deck: ${publicDeckCopy.title}`)
-
             // Fetch flashcards for this deck
             try {
               const flashcardsResponse = await this.flashcardsStore.fetchFlashcards(this.deckId)
               if (flashcardsResponse) {
                 // Add flashcards to the deck
                 this.decksStore.currentDeck.flashcards = flashcardsResponse
-                console.log(`Added ${flashcardsResponse.length} flashcards to public deck ${this.deckId}`)
+                // Flashcards added to the deck
               }
             } catch (flashcardsError) {
-              console.error('Failed to fetch flashcards:', flashcardsError)
+              // Failed to fetch flashcards
             }
           }
         }
@@ -394,9 +392,9 @@ export default {
             this.fullbackCounts[card.id] = 0
           })
 
-          console.log(`Initialized study session with ${this.activeCards.length} cards`)
+          // Study session initialized with cards
         } else {
-          console.error('No flashcards found in the deck')
+          // No flashcards found in the deck
         }
 
         // Only create a study session if the user is authenticated
@@ -404,7 +402,7 @@ export default {
           await this.createStudySession()
         }
       } catch (error) {
-        console.error('Failed to fetch deck:', error)
+        // Failed to fetch deck
       } finally {
         this.loading = false
       }
@@ -414,7 +412,7 @@ export default {
       try {
         this.studySession = await this.studyStore.createStudySession(this.deckId)
       } catch (error) {
-        console.error('Failed to create study session:', error)
+        // Failed to create study session
       }
     },
 
@@ -457,7 +455,7 @@ export default {
               true // Considered correct since we're just moving it back
             )
           } catch (error) {
-            console.error('Failed to save study record:', error)
+            // Failed to save study record
           }
         }
 
@@ -470,7 +468,7 @@ export default {
         // Check if we need to show completion dialog
         this.checkStudyCompletion()
       } catch (error) {
-        console.error('Error during next card operation:', error)
+        // Error during next card operation
       } finally {
         this.saving = false
       }
