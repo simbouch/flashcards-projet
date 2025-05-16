@@ -1,3 +1,19 @@
+# Flashcards Project Release Workflow
+#
+# This workflow is triggered when a GitHub Release is published.
+# It performs the following tasks:
+# 1. Builds Docker images for all services in parallel
+# 2. Tags images with both 'latest' and the release version
+# 3. Pushes images to GitHub Container Registry (ghcr.io)
+# 4. Generates a changelog from commits since the last tag
+# 5. Updates the release with the changelog and Docker image information
+#
+# To use this workflow:
+# 1. Create a new tag: git tag -a v1.0.0 -m "Version 1.0.0"
+# 2. Push the tag: git push origin v1.0.0
+# 3. Go to GitHub and create a release from this tag
+# 4. The workflow will run automatically and update the release
+
 name: Release
 
 on:
@@ -7,6 +23,16 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Set a timeout to prevent hung jobs
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - {name: ocr-service, path: ocr_service}
+          - {name: llm-service, path: llm_service}
+          - {name: db-module, path: db_module}
+          - {name: backend-service, path: backend_service}
+          - {name: frontend-service, path: frontend_service}
 
     steps:
     - uses: actions/checkout@v3
@@ -25,68 +51,21 @@ jobs:
       id: version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-    - name: Build and push OCR Service
+    - name: Build and push ${{ matrix.service.name }}
       uses: docker/build-push-action@v4
       with:
-        context: ./ocr_service
+        context: ./${{ matrix.service.path }}
         push: true
         tags: |
-          ghcr.io/${{ github.repository_owner }}/ocr-service:latest
-          ghcr.io/${{ github.repository_owner }}/ocr-service:${{ steps.version.outputs.VERSION }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        outputs: type=docker
-
-    - name: Build and push LLM Service
-      uses: docker/build-push-action@v4
-      with:
-        context: ./llm_service
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/llm-service:latest
-          ghcr.io/${{ github.repository_owner }}/llm-service:${{ steps.version.outputs.VERSION }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        outputs: type=docker
-
-    - name: Build and push DB Module
-      uses: docker/build-push-action@v4
-      with:
-        context: ./db_module
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/db-module:latest
-          ghcr.io/${{ github.repository_owner }}/db-module:${{ steps.version.outputs.VERSION }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        outputs: type=docker
-
-    - name: Build and push Backend Service
-      uses: docker/build-push-action@v4
-      with:
-        context: ./backend_service
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/backend-service:latest
-          ghcr.io/${{ github.repository_owner }}/backend-service:${{ steps.version.outputs.VERSION }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        outputs: type=docker
-
-    - name: Build and push Frontend Service
-      uses: docker/build-push-action@v4
-      with:
-        context: ./frontend_service
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/frontend-service:latest
-          ghcr.io/${{ github.repository_owner }}/frontend-service:${{ steps.version.outputs.VERSION }}
+          ghcr.io/${{ github.repository_owner }}/${{ matrix.service.name }}:latest
+          ghcr.io/${{ github.repository_owner }}/${{ matrix.service.name }}:${{ steps.version.outputs.VERSION }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         outputs: type=docker
 
   create-release-notes:
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # Set a timeout to prevent hung jobs
     needs: build-and-push
 
     steps:
@@ -97,8 +76,16 @@ jobs:
     - name: Generate changelog
       id: changelog
       run: |
-        echo "## Changes" > changelog.md
-        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s" >> changelog.md
+        echo "# Changelog for ${{ github.ref_name }}" > changelog.md
+        echo "" >> changelog.md
+        echo "## 🚀 New Features" >> changelog.md
+        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s" --grep="^feat" >> changelog.md
+        echo "" >> changelog.md
+        echo "## 🐛 Bug Fixes" >> changelog.md
+        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s" --grep="^fix" >> changelog.md
+        echo "" >> changelog.md
+        echo "## 🔧 Other Changes" >> changelog.md
+        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s" --grep -v "^feat\|^fix" >> changelog.md
 
     - name: Update release with changelog
       uses: softprops/action-gh-release@v1
