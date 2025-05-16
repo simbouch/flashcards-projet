@@ -110,7 +110,6 @@ def test_user_login():
     print("Testing user login...")
     try:
         # Use the credentials from the registration test
-        global test_credentials
         if not test_credentials:
             print("❌ No test credentials available. Registration test must run first.")
             assert False
