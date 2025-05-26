@@ -8,7 +8,7 @@ import logging
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from db_module.database import get_db
-from db_module.models import User, Deck, Flashcard
+from db_module.models import User, Deck, Flashcard, StudySession, StudyRecord
 import uuid
 
 # Configure logging
@@ -168,24 +168,53 @@ def create_system_user(db: Session):
     return system_user
 
 def delete_existing_decks(db: Session, system_user_id: str):
-    """Delete only system-owned decks in the database"""
-    logger.info("Deleting existing system-owned decks...")
+    """Delete only system-owned decks and all related records in the database"""
+    logger.info("Deleting existing system-owned decks and related records...")
 
-    # Get only system-owned decks
-    existing_decks = db.query(Deck).filter(Deck.owner_id == system_user_id).all()
+    try:
+        # Get only system-owned decks
+        existing_decks = db.query(Deck).filter(Deck.owner_id == system_user_id).all()
 
-    for deck in existing_decks:
-        logger.info(f"Deleting system deck: {deck.title} (ID: {deck.id})")
+        if not existing_decks:
+            logger.info("No existing system decks found to delete")
+            return
 
-        # Delete all flashcards in the deck
-        db.query(Flashcard).filter(Flashcard.deck_id == deck.id).delete()
+        deck_ids = [deck.id for deck in existing_decks]
+        logger.info(f"Found {len(existing_decks)} system decks to delete: {[deck.title for deck in existing_decks]}")
 
-        # Delete the deck
-        db.delete(deck)
+        # Step 1: Delete study records for sessions related to these decks
+        study_sessions_to_delete = db.query(StudySession).filter(StudySession.deck_id.in_(deck_ids)).all()
+        session_ids = [session.id for session in study_sessions_to_delete]
 
-    # Commit the changes
-    db.commit()
-    logger.info(f"Deleted {len(existing_decks)} existing system decks")
+        if session_ids:
+            logger.info(f"Deleting {len(session_ids)} study sessions and their records")
+
+            # Delete study records first (they reference study sessions)
+            study_records_deleted = db.query(StudyRecord).filter(StudyRecord.session_id.in_(session_ids)).delete(synchronize_session=False)
+            logger.info(f"Deleted {study_records_deleted} study records")
+
+            # Delete study sessions (they reference decks)
+            study_sessions_deleted = db.query(StudySession).filter(StudySession.deck_id.in_(deck_ids)).delete(synchronize_session=False)
+            logger.info(f"Deleted {study_sessions_deleted} study sessions")
+
+        # Step 2: Delete flashcards for these decks
+        for deck in existing_decks:
+            flashcards_deleted = db.query(Flashcard).filter(Flashcard.deck_id == deck.id).delete(synchronize_session=False)
+            logger.info(f"Deleted {flashcards_deleted} flashcards from deck: {deck.title}")
+
+        # Step 3: Delete the decks themselves
+        for deck in existing_decks:
+            logger.info(f"Deleting system deck: {deck.title} (ID: {deck.id})")
+            db.delete(deck)
+
+        # Commit all changes
+        db.commit()
+        logger.info(f"Successfully deleted {len(existing_decks)} system decks and all related records")
+
+    except Exception as e:
+        logger.error(f"Error during deck deletion: {str(e)}")
+        db.rollback()
+        raise
 
 def create_native_decks(delete_existing=True):
     """Create native decks that will always be available
@@ -193,54 +222,91 @@ def create_native_decks(delete_existing=True):
     Args:
         delete_existing (bool): Whether to delete existing decks before creating new ones
     """
-    logger.info("Creating native decks...")
+    logger.info("Starting native decks creation process...")
+    db = None
 
-    # Get database session
-    db = next(get_db())
+    try:
+        # Get database session
+        db = next(get_db())
+        logger.info("Database session established")
 
-    # Create system user
-    system_user = create_system_user(db)
+        # Create system user
+        system_user = create_system_user(db)
+        logger.info(f"System user ready: {system_user.username}")
 
-    # Delete existing decks if requested
-    if delete_existing:
-        delete_existing_decks(db, system_user.id)
+        # Delete existing decks if requested
+        if delete_existing:
+            logger.info("Cleaning up existing system decks...")
+            delete_existing_decks(db, system_user.id)
+            logger.info("Cleanup completed successfully")
 
-    # Create each native deck
-    for deck_title, flashcards in NATIVE_DECKS.items():
-        # Create new deck
-        logger.info(f"Creating native deck: {deck_title}")
-        new_deck = Deck(
-            id=str(uuid.uuid4()),
-            title=deck_title,
-            description=f"A native deck about {deck_title}",
-            is_public=True,
-            owner_id=system_user.id
-        )
+        # Create each native deck
+        created_decks = 0
+        total_flashcards = 0
 
-        try:
-            db.add(new_deck)
-            db.commit()
-            db.refresh(new_deck)
-            logger.info(f"Created deck: {new_deck.id}")
-
-            # Add flashcards to the deck
-            for card_data in flashcards:
-                new_card = Flashcard(
+        for deck_title, flashcards in NATIVE_DECKS.items():
+            try:
+                # Create new deck
+                logger.info(f"Creating native deck: {deck_title}")
+                new_deck = Deck(
                     id=str(uuid.uuid4()),
-                    question=card_data["question"],
-                    answer=card_data["answer"],
-                    deck_id=new_deck.id
+                    title=deck_title,
+                    description=f"A native deck about {deck_title}",
+                    is_public=True,
+                    owner_id=system_user.id
                 )
-                db.add(new_card)
 
-            db.commit()
-            logger.info(f"Added {len(flashcards)} flashcards to deck: {deck_title}")
+                db.add(new_deck)
+                db.commit()
+                db.refresh(new_deck)
+                logger.info(f"Created deck: {new_deck.id}")
 
-        except IntegrityError as e:
-            logger.error(f"Error creating deck {deck_title}: {e}")
-            db.rollback()
+                # Add flashcards to the deck
+                flashcard_count = 0
+                for card_data in flashcards:
+                    new_card = Flashcard(
+                        id=str(uuid.uuid4()),
+                        question=card_data["question"],
+                        answer=card_data["answer"],
+                        deck_id=new_deck.id
+                    )
+                    db.add(new_card)
+                    flashcard_count += 1
 
-    logger.info("Native decks creation complete")
+                db.commit()
+                logger.info(f"Added {flashcard_count} flashcards to deck: {deck_title}")
+
+                created_decks += 1
+                total_flashcards += flashcard_count
+
+            except IntegrityError as e:
+                logger.error(f"Integrity error creating deck {deck_title}: {e}")
+                db.rollback()
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error creating deck {deck_title}: {e}")
+                db.rollback()
+                raise
+
+        logger.info(f"Native decks creation completed successfully!")
+        logger.info(f"Summary: Created {created_decks} decks with {total_flashcards} total flashcards")
+
+    except Exception as e:
+        logger.error(f"Critical error during native decks creation: {str(e)}")
+        if db:
+            try:
+                db.rollback()
+                logger.info("Database transaction rolled back")
+            except Exception as rollback_error:
+                logger.error(f"Error during rollback: {rollback_error}")
+        raise
+    finally:
+        if db:
+            try:
+                db.close()
+                logger.info("Database session closed")
+            except Exception as close_error:
+                logger.error(f"Error closing database session: {close_error}")
 
 if __name__ == "__main__":
     create_native_decks()

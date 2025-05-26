@@ -1,37 +1,34 @@
-# llm_service/Dockerfile
+ # llm_service/Dockerfile
 
-FROM python:3.10-slim
+ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# 1) Install system deps + CA certs
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
+        build-essential \
+        curl \
+        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install dependencies
+# 2) Copy & install Python deps (make sure nltk is listed)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# 3) Pre-download the standard Punkt tokenizer
+RUN python -m nltk.downloader punkt
+
+# Copy the rest of your app
 COPY src/ ./src/
 
-# Create log directory
+# …the rest remains the same…
 RUN mkdir -p logs
-
-# Create a non-root user and switch to it
-RUN useradd -m llmuser && \
-    chown -R llmuser:llmuser /app
+RUN useradd -m llmuser && chown -R llmuser:llmuser /app
 USER llmuser
 
-# Set environment variables
 ENV PYTHONPATH=/app
 ENV MODEL_NAME="bigscience/bloom-560m"
-
-# Expose the port
 EXPOSE 8001
 
-# Command to run when container starts
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8001"]

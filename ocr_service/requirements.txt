@@ -6,3 +6,6 @@ python-multipart
 loguru
 slowapi
 redis
+opencv-python
+numpy
+PyMuPDF
