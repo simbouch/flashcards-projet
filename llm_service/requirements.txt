@@ -12,3 +12,5 @@ sentencepiece>=0.1.99
 accelerate>=0.20.0
 python-dotenv>=1.0.0
 nltk>=3.8.1
+slowapi>=0.1.9
+redis>=5.0.1

@@ -1,9 +1,11 @@
 """
 Main FastAPI application for the backend service.
 """
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 import os
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -13,6 +15,7 @@ from .logger_config import logger
 from .api import api_router
 from db_module.database import init_db
 from .scripts.create_native_decks import create_native_decks
+from .middleware import limiter, rate_limit_handler, check_redis_health
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,6 +38,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error creating native decks: {str(e)}")
 
+    # Check Redis connection for rate limiting
+    if check_redis_health():
+        logger.info("Redis connection established for rate limiting")
+    else:
+        logger.warning("Redis connection failed - rate limiting may not work properly")
+
     logger.info("Backend service started successfully")
 
     yield
@@ -48,6 +57,10 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan
 )
+
+# Add rate limiter state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 # Add CORS middleware
 app.add_middleware(
@@ -69,10 +82,13 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+    redis_healthy = check_redis_health()
     return {
         "status": "ok",
         "message": "Backend service is healthy",
-        "version": "0.1.0"
+        "version": "0.1.0",
+        "redis_status": "healthy" if redis_healthy else "unhealthy",
+        "rate_limiting": "enabled" if redis_healthy else "disabled"
     }
 
 @app.exception_handler(Exception)

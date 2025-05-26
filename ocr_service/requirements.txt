@@ -4,3 +4,5 @@ pytesseract
 Pillow
 python-multipart
 loguru
+slowapi
+redis

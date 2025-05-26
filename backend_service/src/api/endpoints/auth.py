@@ -1,7 +1,7 @@
 """
 Authentication endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Any
 from datetime import timedelta
@@ -12,11 +12,14 @@ from db_module.database import get_db
 from ...auth.jwt import create_access_token, create_refresh_token_for_user
 from ...config import settings
 from ...logger_config import logger
+from ...middleware import auth_rate_limit
 
 router = APIRouter()
 
 @router.post("/login", response_model=schemas.Token)
+@auth_rate_limit()
 async def login_access_token(
+    request: Request,
     db: Session = Depends(get_db),
     form_data: OAuth2PasswordRequestForm = Depends()
 ) -> Any:
@@ -61,7 +64,9 @@ async def login_access_token(
     }
 
 @router.post("/refresh", response_model=schemas.Token)
+@auth_rate_limit()
 async def refresh_token(
+    request: Request,
     refresh_data: dict,
     db: Session = Depends(get_db)
 ) -> Any:
@@ -121,7 +126,9 @@ async def logout(
     return None
 
 @router.post("/register", response_model=schemas.User)
+@auth_rate_limit()
 async def register_user(
+    request: Request,
     user_in: schemas.UserCreate,
     db: Session = Depends(get_db)
 ) -> Any:
