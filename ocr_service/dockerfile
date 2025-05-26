@@ -19,6 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copier le code source
 COPY src/ ./src/
+# bring your tests into the image
+COPY tests/ ./tests/
 
 EXPOSE 8000
 

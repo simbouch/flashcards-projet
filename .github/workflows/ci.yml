@@ -79,6 +79,8 @@ jobs:
       run: |
         echo "JWT_SECRET_KEY=testsecretkey" >> $GITHUB_ENV
         echo "DATABASE_URL=sqlite:///./test.db" >> $GITHUB_ENV
+        echo "TESTING=true" >> $GITHUB_ENV
+        echo "REDIS_URL=memory://" >> $GITHUB_ENV
 
     - name: Test db_module
       if: steps.changed-files.outputs.any_changed == 'true' && contains(steps.changed-files.outputs.all_changed_files, 'db_module/')

@@ -23,12 +23,24 @@ logger.add("logs/ocr_{time:YYYY-MM-DD}.log", rotation="1 day", retention="7 days
 # Initialize Redis connection for rate limiting
 redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
 
-# Initialize rate limiter
-limiter = Limiter(
-    key_func=get_remote_address,
-    storage_uri=redis_url,
-    default_limits=["50/minute"]  # Default limit for OCR service
-)
+# Check if we're in testing mode
+is_testing = os.getenv("TESTING", "false").lower() == "true"
+
+# Initialize rate limiter with fallback for testing
+if is_testing:
+    # Use memory storage for testing to avoid Redis dependency
+    limiter = Limiter(
+        key_func=get_remote_address,
+        storage_uri="memory://",
+        default_limits=["50/minute"]
+    )
+else:
+    # Use Redis for production
+    limiter = Limiter(
+        key_func=get_remote_address,
+        storage_uri=redis_url,
+        default_limits=["50/minute"]  # Default limit for OCR service
+    )
 
 # Custom rate limit exceeded handler
 def rate_limit_handler(request: Request, exc: RateLimitExceeded):

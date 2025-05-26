@@ -1,3 +1,4 @@
+# ── OCR-service dependencies ──
 fastapi
 uvicorn[standard]
 pytesseract
@@ -9,3 +10,10 @@ redis
 opencv-python
 numpy
 PyMuPDF
+
+# for TestClient support
+httpx
+
+# for testing
+pytest
+pytest-asyncio

@@ -4,13 +4,36 @@ Test fixtures for the LLM service.
 import pytest
 from fastapi.testclient import TestClient
 import sys
+import os
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, Mock
+
+# Set testing environment before importing app
+os.environ['TESTING'] = 'true'
+os.environ['REDIS_URL'] = 'memory://'
 
 # Add the parent directory to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Import the FastAPI app
+# Mock Redis for testing
+@pytest.fixture(autouse=True)
+def mock_redis():
+    """Mock Redis connection for testing"""
+    with patch('redis.Redis') as mock_redis_class:
+        mock_redis_instance = Mock()
+        mock_redis_class.return_value = mock_redis_instance
+        yield mock_redis_instance
+
+# Mock rate limiter for testing
+@pytest.fixture(autouse=True)
+def mock_limiter():
+    """Mock the rate limiter to avoid Redis dependency"""
+    with patch('src.main.limiter') as mock_limiter:
+        # Make the limiter decorator a no-op
+        mock_limiter.limit = lambda *args, **kwargs: lambda func: func
+        yield mock_limiter
+
+# Import the FastAPI app after mocking
 from src.main import app
 
 @pytest.fixture

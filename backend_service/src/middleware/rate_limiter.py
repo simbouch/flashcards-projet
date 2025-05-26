@@ -12,14 +12,26 @@ from ..logger_config import logger
 
 # Initialize Redis connection
 redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-redis_client = redis.from_url(redis_url, decode_responses=True)
 
-# Initialize rate limiter
-limiter = Limiter(
-    key_func=get_remote_address,
-    storage_uri=redis_url,
-    default_limits=["100/minute"]  # Default limit for all endpoints
-)
+# Check if we're in testing mode
+is_testing = os.getenv("TESTING", "false").lower() == "true"
+
+if is_testing:
+    # Use memory storage for testing
+    redis_client = None  # Don't initialize Redis client in testing
+    limiter = Limiter(
+        key_func=get_remote_address,
+        storage_uri="memory://",
+        default_limits=["100/minute"]
+    )
+else:
+    # Use Redis for production
+    redis_client = redis.from_url(redis_url, decode_responses=True)
+    limiter = Limiter(
+        key_func=get_remote_address,
+        storage_uri=redis_url,
+        default_limits=["100/minute"]  # Default limit for all endpoints
+    )
 
 # Custom rate limit exceeded handler
 def rate_limit_handler(request: Request, exc: RateLimitExceeded):
@@ -67,6 +79,9 @@ def check_redis_health():
     """
     Check if Redis is healthy and accessible.
     """
+    if redis_client is None:
+        # In testing mode, always return True
+        return True
     try:
         redis_client.ping()
         return True
@@ -95,6 +110,16 @@ def get_rate_limit_info(request: Request, limit_string: str):
 
         limit_count = int(limit_parts[0])
         limit_period = limit_parts[1]
+
+        # In testing mode, return mock data
+        if redis_client is None:
+            return {
+                "limit": limit_count,
+                "period": limit_period,
+                "current_usage": 0,
+                "remaining": limit_count,
+                "reset_in_seconds": 60
+            }
 
         # Get current usage from Redis
         key = f"slowapi:{client_ip}:{limit_period}"

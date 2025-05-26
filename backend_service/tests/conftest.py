@@ -9,11 +9,37 @@ This module implements best practices for testing FastAPI applications with SQLA
 5. Properly overrides FastAPI's get_db dependency
 """
 import pytest
+import os
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from datetime import datetime, timedelta
+from unittest.mock import patch, Mock
+
+# Set testing environment before importing app
+os.environ['TESTING'] = 'true'
+os.environ['REDIS_URL'] = 'memory://'
+
+# Mock Redis for testing
+@pytest.fixture(autouse=True)
+def mock_redis():
+    """Mock Redis connection for testing"""
+    with patch('redis.Redis') as mock_redis_class, \
+         patch('redis.from_url') as mock_redis_from_url:
+        mock_redis_instance = Mock()
+        mock_redis_class.return_value = mock_redis_instance
+        mock_redis_from_url.return_value = mock_redis_instance
+        yield mock_redis_instance
+
+# Mock rate limiter for testing
+@pytest.fixture(autouse=True)
+def mock_limiter():
+    """Mock the rate limiter to avoid Redis dependency"""
+    with patch('backend_service.src.middleware.rate_limiter.limiter') as mock_limiter:
+        # Make the limiter decorator a no-op
+        mock_limiter.limit = lambda *args, **kwargs: lambda func: func
+        yield mock_limiter
 
 from backend_service.src.main import app
 from db_module.database import get_db
