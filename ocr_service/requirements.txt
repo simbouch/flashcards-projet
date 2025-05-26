@@ -12,6 +12,7 @@ numpy
 PyMuPDF
 
 # for TestClient support
+requests
 httpx
 
 # for testing
