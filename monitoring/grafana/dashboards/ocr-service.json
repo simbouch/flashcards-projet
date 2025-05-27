@@ -1,0 +1,144 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "OCR Service - Detailed Monitoring",
+    "tags": ["flashcards", "ocr", "ml"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "OCR Service Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"ocr-service\"}",
+            "legendFormat": "Service Status"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "OCR Operations Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ocr_operations_total[5m])",
+            "legendFormat": "{{status}} - {{file_type}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 18, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Processing Time by File Type",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(ocr_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile - {{file_type}}"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(ocr_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile - {{file_type}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Active OCR Requests",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ocr_active_requests",
+            "legendFormat": "Active Requests"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Confidence Score Distribution",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(ocr_confidence_score_bucket[5m]))",
+            "legendFormat": "95th percentile confidence"
+          },
+          {
+            "expr": "histogram_quantile(0.75, rate(ocr_confidence_score_bucket[5m]))",
+            "legendFormat": "75th percentile confidence"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(ocr_confidence_score_bucket[5m]))",
+            "legendFormat": "50th percentile confidence"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Word Count Statistics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(ocr_word_count_bucket[5m]))",
+            "legendFormat": "95th percentile words extracted"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(ocr_filtered_words_bucket[5m]))",
+            "legendFormat": "95th percentile words after filtering"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "File Size Distribution",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(ocr_file_size_bytes_bucket[5m])) / 1024 / 1024",
+            "legendFormat": "95th percentile file size (MB)"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(ocr_file_size_bytes_bucket[5m])) / 1024 / 1024",
+            "legendFormat": "50th percentile file size (MB)"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "Error Rate by Type",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ocr_operations_total{status=~\"error.*\"}[5m])",
+            "legendFormat": "{{status}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      },
+      {
+        "id": 9,
+        "title": "MLflow Tracking Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(ocr_operations_total[1h])",
+            "legendFormat": "Operations Tracked (1h)"
+          }
+        ],
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 32}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}

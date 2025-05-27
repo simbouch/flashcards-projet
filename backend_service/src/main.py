@@ -17,6 +17,25 @@ from db_module.database import init_db
 from .scripts.create_native_decks import create_native_decks
 from .middleware import limiter, rate_limit_handler, check_redis_health
 
+# Prometheus metrics
+try:
+    from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+    from prometheus_fastapi_instrumentator import Instrumentator
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    PROMETHEUS_AVAILABLE = False
+    # Create dummy classes for metrics when Prometheus is not available
+    class Counter:
+        def __init__(self, *args, **kwargs): pass
+        def inc(self, *args, **kwargs): pass
+    class Histogram:
+        def __init__(self, *args, **kwargs): pass
+        def observe(self, *args, **kwargs): pass
+    class Gauge:
+        def __init__(self, *args, **kwargs): pass
+        def set(self, *args, **kwargs): pass
+    logger.warning("Prometheus dependencies not available. Monitoring disabled.")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan events for the FastAPI application."""
@@ -61,6 +80,71 @@ app = FastAPI(
 # Add rate limiter state
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+
+# Initialize Prometheus metrics
+if PROMETHEUS_AVAILABLE:
+    instrumentator = Instrumentator()
+    instrumentator.instrument(app).expose(app)
+
+# Custom Prometheus metrics for Backend Service
+backend_requests_total = Counter(
+    'backend_requests_total',
+    'Total number of backend requests',
+    ['method', 'endpoint', 'status']
+)
+
+backend_request_duration = Histogram(
+    'backend_request_duration_seconds',
+    'Time spent processing backend requests',
+    ['method', 'endpoint']
+)
+
+backend_active_users = Gauge(
+    'backend_active_users',
+    'Number of currently active users'
+)
+
+backend_database_operations = Counter(
+    'backend_database_operations_total',
+    'Total number of database operations',
+    ['operation', 'table', 'status']
+)
+
+backend_auth_operations = Counter(
+    'backend_auth_operations_total',
+    'Total number of authentication operations',
+    ['operation', 'status']
+)
+
+backend_deck_operations = Counter(
+    'backend_deck_operations_total',
+    'Total number of deck operations',
+    ['operation', 'status']
+)
+
+backend_study_sessions = Counter(
+    'backend_study_sessions_total',
+    'Total number of study sessions',
+    ['status']
+)
+
+backend_file_uploads = Counter(
+    'backend_file_uploads_total',
+    'Total number of file uploads',
+    ['file_type', 'status']
+)
+
+backend_external_api_calls = Counter(
+    'backend_external_api_calls_total',
+    'Total number of external API calls',
+    ['service', 'status']
+)
+
+backend_external_api_duration = Histogram(
+    'backend_external_api_duration_seconds',
+    'Time spent on external API calls',
+    ['service']
+)
 
 # Add CORS middleware
 app.add_middleware(

@@ -1,0 +1,134 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Flashcards Application - Complete Overview",
+    "tags": ["flashcards", "overview", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "editable": true,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=~\".*-service\"}",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "OCR Operations Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ocr_operations_total[5m])",
+            "legendFormat": "{{status}} - {{file_type}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "OCR Processing Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(ocr_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(ocr_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "OCR Confidence Scores",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(ocr_confidence_score_bucket[5m]))",
+            "legendFormat": "95th percentile confidence"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(ocr_confidence_score_bucket[5m]))",
+            "legendFormat": "50th percentile confidence"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Active OCR Requests",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ocr_active_requests",
+            "legendFormat": "Active Requests"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "HTTP Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{handler}} - {{status}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 18, "x": 6, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{name=~\".*flashcards.*\"} / 1024 / 1024",
+            "legendFormat": "{{name}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{name=~\".*flashcards.*\"}[5m]) * 100",
+            "legendFormat": "{{name}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}

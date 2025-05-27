@@ -1,0 +1,37 @@
+
+# MLflow OCR Tracking Demonstration Commands
+# ==========================================
+
+# 1. Start MLflow Server
+python -m mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri file:./mlruns
+
+# 2. Access MLflow Web Interface
+# Open browser to: http://localhost:5000
+
+# 3. Start OCR Service (if not already running)
+docker compose up -d ocr-service
+
+# 4. Test OCR with different confidence levels
+curl -X POST "http://localhost:8002/extract?min_confidence=0" \
+  -F "file=@demo_images/high_quality.png"
+
+curl -X POST "http://localhost:8002/extract?min_confidence=70" \
+  -F "file=@demo_images/medium_quality.png"
+
+curl -X POST "http://localhost:8002/extract?min_confidence=90" \
+  -F "file=@demo_images/low_quality.png"
+
+# 5. View Results in MLflow UI
+# - Navigate to http://localhost:5000
+# - Click on "ocr_service_tracking" experiment
+# - View individual runs and metrics
+# - Compare confidence scores and processing times
+
+# Key Metrics to Show Stakeholders:
+# ================================
+# - Average confidence scores per document type
+# - Processing time trends
+# - Word filtering effectiveness
+# - Error rates and types
+# - File size vs processing time correlation
+# - Confidence threshold optimization insights

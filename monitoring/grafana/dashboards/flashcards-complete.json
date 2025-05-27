@@ -1,0 +1,230 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Flashcards Application - Complete Monitoring",
+    "tags": ["flashcards", "complete", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "editable": true,
+    "panels": [
+      {
+        "id": 1,
+        "title": "All Services Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=~\".*-service|redis-exporter|cadvisor|node-exporter\"}",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Backend API Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(backend_requests_total[5m])",
+            "legendFormat": "{{method}} {{endpoint}} - {{status}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 6}
+      },
+      {
+        "id": 3,
+        "title": "OCR Operations Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ocr_operations_total[5m])",
+            "legendFormat": "{{status}} - {{file_type}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 6}
+      },
+      {
+        "id": 4,
+        "title": "LLM Generation Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(llm_generation_requests_total[5m])",
+            "legendFormat": "{{request_type}} - {{status}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 6}
+      },
+      {
+        "id": 5,
+        "title": "Backend Response Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(backend_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(backend_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 14}
+      },
+      {
+        "id": 6,
+        "title": "OCR Processing Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(ocr_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(ocr_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 14}
+      },
+      {
+        "id": 7,
+        "title": "LLM Generation Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(llm_generation_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(llm_generation_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 14}
+      },
+      {
+        "id": 8,
+        "title": "Active Requests",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ocr_active_requests",
+            "legendFormat": "OCR Active"
+          },
+          {
+            "expr": "llm_active_generations",
+            "legendFormat": "LLM Active"
+          },
+          {
+            "expr": "backend_active_users",
+            "legendFormat": "Active Users"
+          }
+        ],
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 22}
+      },
+      {
+        "id": 9,
+        "title": "OCR Confidence Scores",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(ocr_confidence_score_bucket[5m]))",
+            "legendFormat": "95th percentile confidence"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(ocr_confidence_score_bucket[5m]))",
+            "legendFormat": "50th percentile confidence"
+          }
+        ],
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 22}
+      },
+      {
+        "id": 10,
+        "title": "Container Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{name=~\".*flashcards.*\"} / 1024 / 1024",
+            "legendFormat": "{{name}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28}
+      },
+      {
+        "id": 11,
+        "title": "Container CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{name=~\".*flashcards.*\"}[5m]) * 100",
+            "legendFormat": "{{name}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28}
+      },
+      {
+        "id": 12,
+        "title": "Redis Operations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(redis_commands_processed_total[5m])",
+            "legendFormat": "Commands/sec"
+          }
+        ],
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 36}
+      },
+      {
+        "id": 13,
+        "title": "Database Operations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(backend_database_operations_total[5m])",
+            "legendFormat": "{{operation}} - {{table}}"
+          }
+        ],
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 36}
+      },
+      {
+        "id": 14,
+        "title": "Error Rates",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(backend_requests_total{status=~\"4..|5..\"}[5m])",
+            "legendFormat": "Backend Errors"
+          },
+          {
+            "expr": "rate(ocr_operations_total{status=~\"error.*\"}[5m])",
+            "legendFormat": "OCR Errors"
+          },
+          {
+            "expr": "rate(llm_generation_errors_total[5m])",
+            "legendFormat": "LLM Errors"
+          }
+        ],
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 36}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}

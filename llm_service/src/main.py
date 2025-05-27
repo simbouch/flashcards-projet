@@ -15,6 +15,30 @@ import redis
 from .logger_config import logger
 from .flashcard_generator import FlashcardGenerator
 
+# Prometheus metrics
+try:
+    from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+    from prometheus_fastapi_instrumentator import Instrumentator
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    PROMETHEUS_AVAILABLE = False
+    # Create dummy classes for metrics when Prometheus is not available
+    class Counter:
+        def __init__(self, *args, **kwargs): pass
+        def inc(self, *args, **kwargs): pass
+        def labels(self, *args, **kwargs): return self
+    class Histogram:
+        def __init__(self, *args, **kwargs): pass
+        def observe(self, *args, **kwargs): pass
+        def labels(self, *args, **kwargs): return self
+    class Gauge:
+        def __init__(self, *args, **kwargs): pass
+        def set(self, *args, **kwargs): pass
+        def inc(self, *args, **kwargs): pass
+        def dec(self, *args, **kwargs): pass
+        def labels(self, *args, **kwargs): return self
+    logger.warning("Prometheus dependencies not available. Monitoring disabled.")
+
 # Initialize Redis connection for rate limiting
 redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
 
@@ -68,6 +92,57 @@ app = FastAPI(
 # Add rate limiter state and exception handler
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+
+# Initialize Prometheus metrics
+if PROMETHEUS_AVAILABLE:
+    instrumentator = Instrumentator()
+    instrumentator.instrument(app).expose(app)
+
+# Custom Prometheus metrics for LLM Service
+llm_generation_requests_total = Counter(
+    'llm_generation_requests_total',
+    'Total number of flashcard generation requests',
+    ['request_type', 'status']
+)
+
+llm_generation_duration = Histogram(
+    'llm_generation_duration_seconds',
+    'Time spent generating flashcards',
+    ['request_type']
+)
+
+llm_flashcards_generated = Counter(
+    'llm_flashcards_generated_total',
+    'Total number of flashcards generated',
+    ['request_type']
+)
+
+llm_model_load_duration = Histogram(
+    'llm_model_load_duration_seconds',
+    'Time spent loading the LLM model'
+)
+
+llm_token_usage = Histogram(
+    'llm_token_usage',
+    'Number of tokens used in generation',
+    ['token_type']  # input, output
+)
+
+llm_active_generations = Gauge(
+    'llm_active_generations',
+    'Number of currently active generation requests'
+)
+
+llm_model_memory_usage = Gauge(
+    'llm_model_memory_usage_bytes',
+    'Memory usage of the LLM model'
+)
+
+llm_generation_errors = Counter(
+    'llm_generation_errors_total',
+    'Total number of generation errors',
+    ['error_type']
+)
 
 # Add CORS middleware
 app.add_middleware(

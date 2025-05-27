@@ -1,0 +1,162 @@
+groups:
+  - name: flashcards_alerts
+    rules:
+      # Service Health Alerts
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been down for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on {{ $labels.job }}"
+          description: "Error rate is {{ $value }} errors per second on {{ $labels.job }}"
+
+      # OCR Service Specific Alerts
+      - alert: OCRProcessingTimeHigh
+        expr: histogram_quantile(0.95, rate(ocr_processing_duration_seconds_bucket[5m])) > 10
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OCR processing time is high"
+          description: "95th percentile OCR processing time is {{ $value }} seconds"
+
+      - alert: OCRConfidenceLow
+        expr: avg_over_time(ocr_average_confidence[10m]) < 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OCR confidence is consistently low"
+          description: "Average OCR confidence over 10 minutes is {{ $value }}%"
+
+      - alert: OCRFailureRateHigh
+        expr: rate(ocr_operations_total{status="failed"}[5m]) / rate(ocr_operations_total[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OCR failure rate is high"
+          description: "OCR failure rate is {{ $value | humanizePercentage }}"
+
+      # LLM Service Specific Alerts
+      - alert: LLMResponseTimeHigh
+        expr: histogram_quantile(0.95, rate(llm_response_duration_seconds_bucket[5m])) > 30
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM response time is high"
+          description: "95th percentile LLM response time is {{ $value }} seconds"
+
+      - alert: LLMTokenLimitExceeded
+        expr: increase(llm_token_limit_exceeded_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM token limit frequently exceeded"
+          description: "Token limit exceeded {{ $value }} times in the last 5 minutes"
+
+      # Backend Service Alerts
+      - alert: DatabaseConnectionFailed
+        expr: increase(database_connection_errors_total[5m]) > 3
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection failures"
+          description: "{{ $value }} database connection failures in the last 5 minutes"
+
+      - alert: AuthenticationFailureSpike
+        expr: rate(auth_failures_total[5m]) > 0.5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Authentication failure rate is {{ $value }} per second"
+
+      # System Resource Alerts
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}%"
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}%"
+
+      - alert: DiskSpaceLow
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage is {{ $value }}% on {{ $labels.mountpoint }}"
+
+      # Container Specific Alerts
+      - alert: ContainerHighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) * 100 > 90
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high memory usage"
+          description: "Container memory usage is {{ $value }}%"
+
+      - alert: ContainerRestartLoop
+        expr: increase(container_restart_count[10m]) > 3
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.name }} restarting frequently"
+          description: "Container has restarted {{ $value }} times in the last 10 minutes"
+
+      # Flashcard Application Specific Alerts
+      - alert: StudySessionFailureRate
+        expr: rate(study_sessions_total{status="failed"}[5m]) / rate(study_sessions_total[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High study session failure rate"
+          description: "Study session failure rate is {{ $value | humanizePercentage }}"
+
+      - alert: DeckCreationFailures
+        expr: increase(deck_creation_failures_total[10m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Multiple deck creation failures"
+          description: "{{ $value }} deck creation failures in the last 10 minutes"
+
+      - alert: RedisConnectionLoss
+        expr: redis_connected_clients < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis has no connected clients"
+          description: "Redis appears to be disconnected from all services"

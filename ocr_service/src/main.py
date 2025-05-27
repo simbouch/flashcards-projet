@@ -5,6 +5,30 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from .logger_config import logger
 from .mlflow_tracker import ocr_tracker
+
+# Prometheus metrics
+try:
+    from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+    from prometheus_fastapi_instrumentator import Instrumentator
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    PROMETHEUS_AVAILABLE = False
+    # Create dummy classes for metrics when Prometheus is not available
+    class Counter:
+        def __init__(self, *args, **kwargs): pass
+        def inc(self, *args, **kwargs): pass
+        def labels(self, *args, **kwargs): return self
+    class Histogram:
+        def __init__(self, *args, **kwargs): pass
+        def observe(self, *args, **kwargs): pass
+        def labels(self, *args, **kwargs): return self
+    class Gauge:
+        def __init__(self, *args, **kwargs): pass
+        def set(self, *args, **kwargs): pass
+        def inc(self, *args, **kwargs): pass
+        def dec(self, *args, **kwargs): pass
+        def labels(self, *args, **kwargs): return self
+    logger.warning("Prometheus dependencies not available. Monitoring disabled.")
 from PIL import Image, ImageEnhance, ImageFilter
 import pytesseract, io
 import os
@@ -243,6 +267,54 @@ app = FastAPI(title="OCR Service")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
+# Initialize Prometheus metrics
+if PROMETHEUS_AVAILABLE:
+    instrumentator = Instrumentator()
+    instrumentator.instrument(app).expose(app)
+
+# Custom Prometheus metrics
+ocr_operations_total = Counter(
+    'ocr_operations_total',
+    'Total number of OCR operations',
+    ['status', 'file_type']
+)
+
+ocr_processing_duration = Histogram(
+    'ocr_processing_duration_seconds',
+    'Time spent processing OCR requests',
+    ['file_type']
+)
+
+ocr_confidence_score = Histogram(
+    'ocr_confidence_score',
+    'OCR confidence scores',
+    ['file_type'],
+    buckets=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+)
+
+ocr_word_count = Histogram(
+    'ocr_word_count',
+    'Number of words extracted',
+    ['file_type']
+)
+
+ocr_filtered_words = Histogram(
+    'ocr_filtered_words',
+    'Number of words after confidence filtering',
+    ['file_type']
+)
+
+ocr_file_size = Histogram(
+    'ocr_file_size_bytes',
+    'Size of processed files',
+    ['file_type']
+)
+
+ocr_active_requests = Gauge(
+    'ocr_active_requests',
+    'Number of currently active OCR requests'
+)
+
 @app.post("/extract")
 @limiter.limit("10/minute")  # Strict limit for OCR processing
 async def extract_text(
@@ -260,7 +332,13 @@ async def extract_text(
     Returns:
         JSON response with extracted text, confidence scores, and filtering statistics
     """
+    import time
+    start_time = time.time()
+
     logger.info("Received file {name} (content_type={ct})", name=file.filename, ct=file.content_type)
+
+    # Increment active requests gauge
+    ocr_active_requests.inc()
 
     # Start MLflow tracking for this OCR operation
     with ocr_tracker.track_ocr_operation("text_extraction"):
@@ -278,6 +356,13 @@ async def extract_text(
             if file.content_type == 'application/pdf':
                 logger.info(f"Processing PDF file: {file.filename}")
                 result = extract_text_from_pdf(contents)
+
+                # Record Prometheus metrics
+                processing_time = time.time() - start_time
+                ocr_processing_duration.labels(file_type="pdf").observe(processing_time)
+                ocr_file_size.labels(file_type="pdf").observe(file_size)
+                ocr_operations_total.labels(status="success", file_type="pdf").inc()
+                ocr_active_requests.dec()
 
                 return {
                     "filename": file.filename,
@@ -308,6 +393,16 @@ async def extract_text(
                            len(ocr_result["text"]), ocr_result["average_confidence"],
                            ocr_result["filtered_word_count"])
 
+                # Record Prometheus metrics for image processing
+                processing_time = time.time() - start_time
+                ocr_processing_duration.labels(file_type="image").observe(processing_time)
+                ocr_file_size.labels(file_type="image").observe(file_size)
+                ocr_confidence_score.labels(file_type="image").observe(ocr_result["average_confidence"])
+                ocr_word_count.labels(file_type="image").observe(ocr_result["word_count"])
+                ocr_filtered_words.labels(file_type="image").observe(ocr_result["filtered_word_count"])
+                ocr_operations_total.labels(status="success", file_type="image").inc()
+                ocr_active_requests.dec()
+
                 return {
                     "filename": file.filename,
                     "file_type": "image",
@@ -327,6 +422,9 @@ async def extract_text(
 
             else:
                 logger.warning("Rejected unsupported format: {}", file.content_type)
+                # Record error metrics
+                ocr_operations_total.labels(status="error_unsupported_format", file_type="unknown").inc()
+                ocr_active_requests.dec()
                 raise HTTPException(
                     status_code=415,
                     detail=f"Format non supporté : {file.content_type}. Formats supportés: images (PNG, JPG, etc.)" +
@@ -334,10 +432,14 @@ async def extract_text(
                 )
 
         except HTTPException:
+            # Decrement active requests for HTTP exceptions
+            ocr_active_requests.dec()
             raise
         except Exception as e:
-            # Log error to MLflow
+            # Log error to MLflow and Prometheus
             ocr_tracker.log_error_metrics("ocr_failure", str(e))
+            ocr_operations_total.labels(status="error_processing", file_type="unknown").inc()
+            ocr_active_requests.dec()
             logger.exception("OCR failure")
             raise HTTPException(500, f"Erreur OCR : {e}")
 @app.get("/health")

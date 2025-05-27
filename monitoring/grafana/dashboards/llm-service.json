@@ -1,0 +1,163 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "LLM Service - Detailed Monitoring",
+    "tags": ["flashcards", "llm", "ai"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "LLM Service Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"llm-service\"}",
+            "legendFormat": "Service Status"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Generation Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(llm_generation_requests_total[5m])",
+            "legendFormat": "{{request_type}} - {{status}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 18, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Generation Time Distribution",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.99, rate(llm_generation_duration_seconds_bucket[5m]))",
+            "legendFormat": "99th percentile - {{request_type}}"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(llm_generation_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile - {{request_type}}"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(llm_generation_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile - {{request_type}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Active Generations",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "llm_active_generations",
+            "legendFormat": "Active Generations"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Flashcards Generated",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(llm_flashcards_generated_total[5m])",
+            "legendFormat": "{{request_type}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Model Load Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(llm_model_load_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile load time"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "Model Memory Usage",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "llm_model_memory_usage_bytes / 1024 / 1024 / 1024",
+            "legendFormat": "Memory Usage (GB)"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 16}
+      },
+      {
+        "id": 8,
+        "title": "Token Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(llm_token_usage_bucket[5m]))",
+            "legendFormat": "95th percentile - {{token_type}}"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(llm_token_usage_bucket[5m]))",
+            "legendFormat": "50th percentile - {{token_type}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 9,
+        "title": "Generation Errors",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(llm_generation_errors_total[5m])",
+            "legendFormat": "{{error_type}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      },
+      {
+        "id": 10,
+        "title": "Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(llm_generation_requests_total{status=\"success\"}[5m]) / rate(llm_generation_requests_total[5m]) * 100",
+            "legendFormat": "Success Rate %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 80},
+                {"color": "green", "value": 95}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 32}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}
