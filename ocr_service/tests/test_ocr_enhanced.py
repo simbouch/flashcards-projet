@@ -77,10 +77,24 @@ class TestOCREnhanced:
         with patch(f'{main_module}.extract_text_with_confidence') as mock_ocr:
             mock_ocr.return_value = {
                 "text": test_text,
+                "filtered_text": test_text,
                 "words": ["Hello", "World"],
+                "filtered_words": ["Hello", "World"],
                 "word_confidences": [95, 90],
+                "filtered_confidences": [95, 90],
                 "average_confidence": 92.5,
-                "word_count": 2
+                "filtered_average_confidence": 92.5,
+                "word_count": 2,
+                "filtered_word_count": 2,
+                "low_confidence_words": [],
+                "confidence_stats": {
+                    "high_confidence_count": 2,
+                    "medium_confidence_count": 0,
+                    "low_confidence_count": 0,
+                    "total_words": 2,
+                    "filtering_threshold": 0.0,
+                    "words_filtered_out": 0
+                }
             }
 
             response = client.post(
@@ -94,10 +108,70 @@ class TestOCREnhanced:
         assert data["filename"] == "test.png"
         assert data["file_type"] == "image"
         assert data["text"] == test_text
+        assert data["filtered_text"] == test_text
         assert data["average_confidence"] == 92.5
+        assert data["filtered_average_confidence"] == 92.5
         assert data["word_count"] == 2
+        assert data["filtered_word_count"] == 2
+        assert "confidence_stats" in data
+        assert data["confidence_stats"]["high_confidence_count"] == 2
         assert data["preprocessing_applied"] is True
         assert data["status"] == "success"
+
+    def test_confidence_filtering(self, client):
+        """Test OCR with confidence filtering."""
+        # Create test image
+        test_text = "Good Bad"
+        image_data = create_test_image_with_text(test_text)
+
+        # Mock OCR functions with mixed confidence scores
+        try:
+            import src.main
+            main_module = 'src.main'
+        except ImportError:
+            main_module = 'ocr_service.src.main'
+
+        with patch(f'{main_module}.extract_text_with_confidence') as mock_ocr:
+            mock_ocr.return_value = {
+                "text": "Good Bad",
+                "filtered_text": "Good",  # Only high confidence word
+                "words": ["Good", "Bad"],
+                "filtered_words": ["Good"],
+                "word_confidences": [95, 30],  # High and low confidence
+                "filtered_confidences": [95],
+                "average_confidence": 62.5,
+                "filtered_average_confidence": 95.0,
+                "word_count": 2,
+                "filtered_word_count": 1,
+                "low_confidence_words": [{"word": "Bad", "confidence": 30}],
+                "confidence_stats": {
+                    "high_confidence_count": 1,
+                    "medium_confidence_count": 0,
+                    "low_confidence_count": 1,
+                    "total_words": 2,
+                    "filtering_threshold": 70.0,
+                    "words_filtered_out": 1
+                }
+            }
+
+            # Test with confidence threshold of 70%
+            response = client.post(
+                "/extract?min_confidence=70.0",
+                files={"file": ("test.png", image_data, "image/png")}
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Check filtering worked correctly
+        assert data["text"] == "Good Bad"  # Original text
+        assert data["filtered_text"] == "Good"  # Filtered text
+        assert data["word_count"] == 2  # Original word count
+        assert data["filtered_word_count"] == 1  # Filtered word count
+        assert len(data["low_confidence_words"]) == 1
+        assert data["low_confidence_words"][0]["word"] == "Bad"
+        assert data["confidence_stats"]["words_filtered_out"] == 1
+        assert data["confidence_stats"]["filtering_threshold"] == 70.0
 
     def test_pdf_ocr(self, client):
         """Test PDF OCR functionality."""
@@ -212,8 +286,11 @@ class TestOCREnhanced:
             result = extract_text_with_confidence(image)
 
             assert result["text"] == "fallback text"
+            assert result["filtered_text"] == "fallback text"
             assert result["average_confidence"] == 0
+            assert result["filtered_average_confidence"] == 0
             assert result["word_count"] == 2  # "fallback text" = 2 words
+            assert result["filtered_word_count"] == 2
 
     def test_rate_limiting(self, client):
         """Test that basic requests work (rate limiting tested separately)."""
@@ -231,10 +308,24 @@ class TestOCREnhanced:
         with patch(f'{main_module}.extract_text_with_confidence') as mock_ocr:
             mock_ocr.return_value = {
                 "text": "Test",
+                "filtered_text": "Test",
                 "words": ["Test"],
+                "filtered_words": ["Test"],
                 "word_confidences": [95],
+                "filtered_confidences": [95],
                 "average_confidence": 95.0,
-                "word_count": 1
+                "filtered_average_confidence": 95.0,
+                "word_count": 1,
+                "filtered_word_count": 1,
+                "low_confidence_words": [],
+                "confidence_stats": {
+                    "high_confidence_count": 1,
+                    "medium_confidence_count": 0,
+                    "low_confidence_count": 0,
+                    "total_words": 1,
+                    "filtering_threshold": 0.0,
+                    "words_filtered_out": 0
+                }
             }
 
             # Make a few requests to test basic functionality

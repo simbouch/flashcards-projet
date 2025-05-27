@@ -1,9 +1,10 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Request
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Query
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from .logger_config import logger
+from .mlflow_tracker import ocr_tracker
 from PIL import Image, ImageEnhance, ImageFilter
 import pytesseract, io
 import os
@@ -99,12 +100,13 @@ def preprocess_image(image: Image.Image) -> Image.Image:
         logger.warning(f"Image preprocessing failed: {e}, using original image")
         return image
 
-def extract_text_with_confidence(image: Image.Image) -> Dict[str, Any]:
+def extract_text_with_confidence(image: Image.Image, min_confidence: float = 0.0) -> Dict[str, Any]:
     """
-    Extract text from image with confidence scores.
+    Extract text from image with confidence scores and optional filtering.
 
     Args:
         image: PIL Image object
+        min_confidence: Minimum confidence threshold (0-100). Words below this threshold will be filtered out.
 
     Returns:
         Dictionary containing extracted text and confidence data
@@ -113,38 +115,84 @@ def extract_text_with_confidence(image: Image.Image) -> Dict[str, Any]:
         # Get detailed OCR data with confidence scores
         ocr_data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT, lang="fra")
 
-        # Extract text and calculate confidence
-        words = []
-        confidences = []
+        # Extract text and calculate confidence with filtering
+        all_words = []
+        all_confidences = []
+        filtered_words = []
+        filtered_confidences = []
+        low_confidence_words = []
 
         for i, word in enumerate(ocr_data['text']):
             if word.strip():  # Only include non-empty words
-                words.append(word)
-                confidences.append(int(ocr_data['conf'][i]))
+                confidence = int(ocr_data['conf'][i])
+                all_words.append(word)
+                all_confidences.append(confidence)
 
-        # Calculate overall confidence
-        avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+                if confidence >= min_confidence:
+                    filtered_words.append(word)
+                    filtered_confidences.append(confidence)
+                else:
+                    low_confidence_words.append({"word": word, "confidence": confidence})
 
-        # Get full text
+        # Calculate confidence statistics
+        avg_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0
+        filtered_avg_confidence = sum(filtered_confidences) / len(filtered_confidences) if filtered_confidences else 0
+
+        # Categorize confidence levels
+        high_confidence_count = len([c for c in all_confidences if c >= 80])
+        medium_confidence_count = len([c for c in all_confidences if 50 <= c < 80])
+        low_confidence_count = len([c for c in all_confidences if c < 50])
+
+        # Get full text (original and filtered)
         full_text = pytesseract.image_to_string(image, lang="fra").strip()
+        filtered_text = " ".join(filtered_words) if filtered_words else ""
 
         return {
             "text": full_text,
-            "words": words,
-            "word_confidences": confidences,
+            "filtered_text": filtered_text,
+            "words": all_words,
+            "filtered_words": filtered_words,
+            "word_confidences": all_confidences,
+            "filtered_confidences": filtered_confidences,
             "average_confidence": round(avg_confidence, 2),
-            "word_count": len(words)
+            "filtered_average_confidence": round(filtered_avg_confidence, 2),
+            "word_count": len(all_words),
+            "filtered_word_count": len(filtered_words),
+            "low_confidence_words": low_confidence_words,
+            "confidence_stats": {
+                "high_confidence_count": high_confidence_count,
+                "medium_confidence_count": medium_confidence_count,
+                "low_confidence_count": low_confidence_count,
+                "total_words": len(all_words),
+                "filtering_threshold": min_confidence,
+                "words_filtered_out": len(all_words) - len(filtered_words)
+            }
         }
     except Exception as e:
         logger.error(f"OCR with confidence failed: {e}")
         # Fallback to basic OCR
         text = pytesseract.image_to_string(image, lang="fra").strip()
+        words = text.split()
         return {
             "text": text,
-            "words": text.split(),
+            "filtered_text": text,  # No filtering in fallback
+            "words": words,
+            "filtered_words": words,
             "word_confidences": [],
+            "filtered_confidences": [],
             "average_confidence": 0,
-            "word_count": len(text.split())
+            "filtered_average_confidence": 0,
+            "word_count": len(words),
+            "filtered_word_count": len(words),
+            "low_confidence_words": [],
+            "confidence_stats": {
+                "high_confidence_count": 0,
+                "medium_confidence_count": 0,
+                "low_confidence_count": 0,
+                "total_words": len(words),
+                "filtering_threshold": min_confidence,
+                "words_filtered_out": 0
+            }
         }
 
 def extract_text_from_pdf(pdf_content: bytes) -> Dict[str, Any]:
@@ -197,69 +245,101 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 @app.post("/extract")
 @limiter.limit("10/minute")  # Strict limit for OCR processing
-async def extract_text(request: Request, file: UploadFile = File(...)):
+async def extract_text(
+    request: Request,
+    file: UploadFile = File(...),
+    min_confidence: float = Query(0.0, ge=0.0, le=100.0, description="Minimum confidence threshold (0-100) for text filtering")
+):
     """
-    Extract text from an uploaded image or PDF using enhanced OCR.
+    Extract text from an uploaded image or PDF using enhanced OCR with confidence filtering.
+
+    Args:
+        file: Image or PDF file to process
+        min_confidence: Minimum confidence threshold (0-100). Words below this threshold will be filtered out.
+
+    Returns:
+        JSON response with extracted text, confidence scores, and filtering statistics
     """
     logger.info("Received file {name} (content_type={ct})", name=file.filename, ct=file.content_type)
 
-    try:
-        # Read file content
-        contents = await file.read()
+    # Start MLflow tracking for this OCR operation
+    with ocr_tracker.track_ocr_operation("text_extraction"):
+        try:
+            # Read file content
+            contents = await file.read()
+            file_size = len(contents)
 
-        # Handle PDF files
-        if file.content_type == 'application/pdf':
-            logger.info(f"Processing PDF file: {file.filename}")
-            result = extract_text_from_pdf(contents)
+            # Log file metadata
+            ocr_tracker.log_file_metadata(file.filename,
+                                        "pdf" if file.content_type == 'application/pdf' else "image",
+                                        file_size)
 
-            return {
-                "filename": file.filename,
-                "file_type": "pdf",
-                "text": result["text"],
-                "pages": result["pages"],
-                "page_count": result["page_count"],
-                "total_characters": result["total_characters"],
-                "status": "success"
-            }
+            # Handle PDF files
+            if file.content_type == 'application/pdf':
+                logger.info(f"Processing PDF file: {file.filename}")
+                result = extract_text_from_pdf(contents)
 
-        # Handle image files
-        elif file.content_type.startswith('image/'):
-            logger.info(f"Processing image file: {file.filename}")
+                return {
+                    "filename": file.filename,
+                    "file_type": "pdf",
+                    "text": result["text"],
+                    "pages": result["pages"],
+                    "page_count": result["page_count"],
+                    "total_characters": result["total_characters"],
+                    "status": "success"
+                }
 
-            # Load and preprocess image
-            original_image = Image.open(io.BytesIO(contents))
-            processed_image = preprocess_image(original_image)
+            # Handle image files
+            elif file.content_type.startswith('image/'):
+                logger.info(f"Processing image file: {file.filename}")
 
-            # Extract text with confidence scores
-            ocr_result = extract_text_with_confidence(processed_image)
+                # Load and preprocess image
+                original_image = Image.open(io.BytesIO(contents))
+                processed_image = preprocess_image(original_image)
 
-            logger.info("Extracted {} characters with {}% confidence",
-                       len(ocr_result["text"]), ocr_result["average_confidence"])
+                # Extract text with confidence scores and filtering
+                ocr_result = extract_text_with_confidence(processed_image, min_confidence)
 
-            return {
-                "filename": file.filename,
-                "file_type": "image",
-                "text": ocr_result["text"],
-                "average_confidence": ocr_result["average_confidence"],
-                "word_count": ocr_result["word_count"],
-                "word_confidences": ocr_result["word_confidences"],
-                "preprocessing_applied": True,
-                "status": "success"
-            }
+                # Log confidence metrics to MLflow
+                ocr_tracker.log_confidence_metrics(ocr_result, min_confidence)
+                ocr_tracker.log_processing_metrics(preprocessing_applied=True)
 
-        else:
-            logger.warning("Rejected unsupported format: {}", file.content_type)
-            raise HTTPException(
-                status_code=415,
-                detail=f"Format non supporté : {file.content_type}. Formats supportés: images (PNG, JPG, etc.)" +
-                       (" et PDF" if PDF_SUPPORT else "")
-            )
+                logger.info("Extracted {} characters with {}% confidence (filtered: {} words)",
+                           len(ocr_result["text"]), ocr_result["average_confidence"],
+                           ocr_result["filtered_word_count"])
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception("OCR failure")
-        raise HTTPException(500, f"Erreur OCR : {e}")
+                return {
+                    "filename": file.filename,
+                    "file_type": "image",
+                    "text": ocr_result["text"],
+                    "filtered_text": ocr_result["filtered_text"],
+                    "average_confidence": ocr_result["average_confidence"],
+                    "filtered_average_confidence": ocr_result["filtered_average_confidence"],
+                    "word_count": ocr_result["word_count"],
+                    "filtered_word_count": ocr_result["filtered_word_count"],
+                    "word_confidences": ocr_result["word_confidences"],
+                    "filtered_confidences": ocr_result["filtered_confidences"],
+                    "low_confidence_words": ocr_result["low_confidence_words"],
+                    "confidence_stats": ocr_result["confidence_stats"],
+                    "preprocessing_applied": True,
+                    "status": "success"
+                }
+
+            else:
+                logger.warning("Rejected unsupported format: {}", file.content_type)
+                raise HTTPException(
+                    status_code=415,
+                    detail=f"Format non supporté : {file.content_type}. Formats supportés: images (PNG, JPG, etc.)" +
+                           (" et PDF" if PDF_SUPPORT else "")
+                )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            # Log error to MLflow
+            ocr_tracker.log_error_metrics("ocr_failure", str(e))
+            logger.exception("OCR failure")
+            raise HTTPException(500, f"Erreur OCR : {e}")
 @app.get("/health")
 def health_check():
     return {"status": "ok"}

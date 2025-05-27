@@ -18,3 +18,6 @@ httpx
 # for testing
 pytest
 pytest-asyncio
+
+# for ML tracking and monitoring
+mlflow==2.18.0
