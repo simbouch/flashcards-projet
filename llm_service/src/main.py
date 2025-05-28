@@ -12,8 +12,11 @@ from typing import List, Dict, Any, Optional
 import os
 import time
 import redis
+from datetime import datetime
 from .logger_config import logger
 from .flashcard_generator import FlashcardGenerator
+from .model_evaluator import ModelEvaluator
+from .data_collector import DataCollector, UserInteraction, UserFeedback
 
 # Prometheus metrics
 try:
@@ -153,8 +156,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize flashcard generator
+# Initialize flashcard generator and monitoring components
 generator = None
+model_evaluator = ModelEvaluator()
+data_collector = DataCollector()
 
 # Pydantic models for request/response validation
 class TextGenerationRequest(BaseModel):
@@ -191,6 +196,14 @@ class GenerationResponse(BaseModel):
     flashcards: List[Flashcard]
     metadata: Dict[str, Any]
     error: Optional[str] = None
+
+class FeedbackRequest(BaseModel):
+    """Request model for user feedback."""
+    interaction_id: str = Field(..., description="ID of the interaction being rated")
+    rating: int = Field(..., description="Overall rating (1-5)", ge=1, le=5)
+    feedback_text: Optional[str] = Field(None, description="Optional feedback text")
+    card_quality_rating: Optional[int] = Field(None, description="Card quality rating (1-5)", ge=1, le=5)
+    educational_value_rating: Optional[int] = Field(None, description="Educational value rating (1-5)", ge=1, le=5)
 
 @app.on_event("startup")
 async def startup_event():
@@ -229,25 +242,70 @@ async def health_check():
 @limiter.limit("5/minute")  # Very strict limit for AI generation
 async def generate_flashcards(request: Request, generation_request: TextGenerationRequest):
     """
-    Generate flashcards from text.
+    Generate flashcards from text with comprehensive monitoring.
     """
     global generator
 
-    # Initialize generator if not already done
-    if generator is None:
-        try:
-            generator = FlashcardGenerator()
-        except Exception as e:
-            logger.exception(f"Failed to initialize generator: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to initialize LLM service: {str(e)}")
+    # Start monitoring
+    start_time = time.time()
+    session_id = f"session_{int(start_time)}"
+    client_ip = get_remote_address(request)
 
-    # Generate flashcards
+    # Update active generations metric
+    llm_active_generations.inc()
+
     try:
+        # Initialize generator if not already done
+        if generator is None:
+            try:
+                generator = FlashcardGenerator()
+            except Exception as e:
+                logger.exception(f"Failed to initialize generator: {e}")
+                llm_generation_errors.labels(error_type="initialization").inc()
+                raise HTTPException(status_code=500, detail=f"Failed to initialize LLM service: {str(e)}")
+
+        # Generate flashcards
+        llm_generation_requests_total.labels(request_type="text", status="started").inc()
+
         result = await generator.generate_flashcards(generation_request.text, generation_request.num_cards)
+
+        # Calculate metrics
+        response_time = time.time() - start_time
+        llm_generation_duration.labels(request_type="text").observe(response_time)
+
+        # Count generated flashcards
+        num_generated = len(result.get('flashcards', []))
+        llm_flashcards_generated.labels(request_type="text").inc(num_generated)
+
+        # Record user interaction for training data collection
+        interaction = UserInteraction(
+            session_id=session_id,
+            user_id=client_ip,  # Using IP as user identifier for now
+            input_text=generation_request.text,
+            generated_cards=result.get('flashcards', []),
+            response_time=response_time,
+            timestamp=datetime.now()
+        )
+        data_collector.record_user_interaction(interaction)
+
+        # Update success metrics
+        llm_generation_requests_total.labels(request_type="text", status="success").inc()
+
+        logger.info(f"Generated {num_generated} flashcards in {response_time:.2f}s for session {session_id}")
+
         return result
+
     except Exception as e:
+        # Record error metrics
+        llm_generation_errors.labels(error_type="generation").inc()
+        llm_generation_requests_total.labels(request_type="text", status="error").inc()
+
         logger.exception(f"Error generating flashcards: {e}")
         raise HTTPException(status_code=500, detail=f"Error generating flashcards: {str(e)}")
+
+    finally:
+        # Update active generations metric
+        llm_active_generations.dec()
 
 @app.post("/generate/chunks", response_model=GenerationResponse)
 @limiter.limit("5/minute")  # Very strict limit for AI generation
@@ -272,6 +330,53 @@ async def generate_flashcards_from_chunks(request: Request, chunks_request: Chun
     except Exception as e:
         logger.exception(f"Error generating flashcards from chunks: {e}")
         raise HTTPException(status_code=500, detail=f"Error generating flashcards: {str(e)}")
+
+@app.post("/feedback")
+async def submit_feedback(feedback_request: FeedbackRequest):
+    """
+    Submit user feedback for a generation interaction.
+    """
+    try:
+        # Create feedback object
+        feedback = UserFeedback(
+            interaction_id=feedback_request.interaction_id,
+            rating=feedback_request.rating,
+            feedback_text=feedback_request.feedback_text,
+            card_quality_rating=feedback_request.card_quality_rating,
+            educational_value_rating=feedback_request.educational_value_rating,
+            timestamp=datetime.now()
+        )
+
+        # Record feedback
+        data_collector.record_user_feedback(feedback)
+
+        logger.info(f"Received feedback for interaction {feedback_request.interaction_id}: rating={feedback_request.rating}")
+
+        return {"status": "success", "message": "Feedback recorded successfully"}
+
+    except Exception as e:
+        logger.exception(f"Error recording feedback: {e}")
+        raise HTTPException(status_code=500, detail=f"Error recording feedback: {str(e)}")
+
+@app.get("/metrics/performance")
+async def get_performance_metrics():
+    """
+    Get current model performance metrics.
+    """
+    try:
+        # Get recent performance data
+        performance_trend = model_evaluator.get_performance_trend(days=7)
+        feedback_summary = data_collector.get_user_feedback_summary(days=7)
+
+        return {
+            "performance_trend": performance_trend,
+            "user_feedback_summary": feedback_summary,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"Error getting performance metrics: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting performance metrics: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

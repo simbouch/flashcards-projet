@@ -16,8 +16,8 @@ RUN apt-get update && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 3) Pre-download the standard Punkt tokenizer
-RUN python -m nltk.downloader punkt
+# 3) Pre-download the NLTK tokenizers
+RUN python -m nltk.downloader punkt_tab || python -m nltk.downloader punkt
 
 # Copy the rest of your app
 COPY src/ ./src/

@@ -1,226 +1,147 @@
-# MLflow OCR Tracking Demonstration Guide
+# MLflow Demo Guide
 
-## 🎯 Overview
-This guide demonstrates the MLflow tracking capabilities implemented in the OCR service, showing how to monitor OCR performance, confidence scores, and operational metrics.
+This guide demonstrates how to use MLflow tracking with the OCR and LLM services in the flashcards application.
 
-## 🚀 Quick Start Demo
+## Overview
 
-### Step 1: Start the Demo Environment
+MLflow is integrated into both services to track:
+- **OCR Service**: Comprehensive tracking of text extraction operations, confidence scores, and performance metrics
+- **LLM Service**: Basic tracking of flashcard generation operations and model performance
 
+## MLflow Setup
+
+### OCR Service MLflow (Comprehensive)
+The OCR service uses MLflow extensively to track:
+- Text extraction operations
+- Confidence scores and filtering statistics
+- File processing metrics
+- Error tracking and debugging information
+
+### LLM Service MLflow (Minimalistic)
+The LLM service uses MLflow for basic tracking:
+- Generation requests
+- Model performance metrics
+- Simple error logging
+
+## Accessing MLflow UI
+
+### OCR MLflow Server
+- URL: http://localhost:5000
+- Experiment: `ocr_service_tracking`
+
+### LLM MLflow Server  
+- URL: http://localhost:5001
+- Experiment: `llm_service_tracking`
+
+## Demo Commands
+
+### 1. Start the Services
 ```bash
-# Navigate to OCR service directory
-cd ocr_service
-
-# Install MLflow if not already installed
-pip install mlflow==2.18.0
-
-# Run the automated demo script
-python demo_mlflow.py
+docker-compose up -d
 ```
 
-### Step 2: Manual Setup (Alternative)
-
+### 2. Test OCR Service with MLflow Tracking
 ```bash
-# 1. Start MLflow tracking server
-python -m mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri file:./mlruns
-
-# 2. Start OCR service (in another terminal)
-cd ..
-docker compose up -d ocr-service
-
-# 3. Access MLflow UI
-# Open browser to: http://localhost:5000
+# Upload an image for OCR processing
+curl -X POST "http://localhost:8000/extract" \
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@ocr_service/demo_images/high_quality.png" \
+  -F "min_confidence=70"
 ```
 
-## 📊 Demonstration Scenarios
-
-### Scenario 1: Basic OCR Tracking
-
+### 3. Test LLM Service with MLflow Tracking
 ```bash
-# Process a document without confidence filtering
-curl -X POST "http://localhost:8002/extract?min_confidence=0" \
-  -F "file=@demo_images/high_quality.png"
-
-# Check MLflow UI to see:
-# - Operation duration
-# - File metadata (name, size, type)
-# - Confidence statistics
-# - Word counts
+# Generate flashcards
+curl -X POST "http://localhost:8001/generate" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Python is a programming language used for web development and data science.",
+    "num_cards": 3
+  }'
 ```
 
-### Scenario 2: Confidence Filtering Comparison
+### 4. View MLflow Experiments
+Open your browser and navigate to:
+- OCR MLflow: http://localhost:5000
+- LLM MLflow: http://localhost:5001
 
-```bash
-# Test different confidence thresholds on the same image
-curl -X POST "http://localhost:8002/extract?min_confidence=0" \
-  -F "file=@demo_images/medium_quality.png"
+## What Gets Tracked
 
-curl -X POST "http://localhost:8002/extract?min_confidence=50" \
-  -F "file=@demo_images/medium_quality.png"
+### OCR Service Tracking
+- **Run Parameters**: 
+  - File name and type
+  - Confidence threshold
+  - Preprocessing settings
+- **Metrics**:
+  - Average confidence score
+  - Word count (total and filtered)
+  - Processing time
+  - File size
+- **Artifacts**:
+  - Confidence distribution charts
+  - Processing logs
 
-curl -X POST "http://localhost:8002/extract?min_confidence=70" \
-  -F "file=@demo_images/medium_quality.png"
+### LLM Service Tracking
+- **Run Parameters**:
+  - Input text length
+  - Number of cards requested
+- **Metrics**:
+  - Generation time
+  - Number of cards generated
+  - Model performance
+- **Artifacts**:
+  - Generated flashcards (sample)
 
-curl -X POST "http://localhost:8002/extract?min_confidence=90" \
-  -F "file=@demo_images/medium_quality.png"
-```
+## Monitoring and Analysis
 
-### Scenario 3: Error Tracking
+### OCR Performance Analysis
+1. Navigate to OCR MLflow UI
+2. Compare runs with different confidence thresholds
+3. Analyze confidence score distributions
+4. Monitor processing times for different file types
 
-```bash
-# Test unsupported file format to see error tracking
-curl -X POST "http://localhost:8002/extract" \
-  -F "file=@demo_commands.txt"
+### LLM Performance Analysis
+1. Navigate to LLM MLflow UI
+2. Track generation success rates
+3. Monitor response times
+4. Compare different input text lengths
 
-# Check MLflow UI for error metrics:
-# - Error type: http_415
-# - Error message details
-# - Operation metadata
-```
+## Troubleshooting
 
-## 🎯 Key Metrics for Stakeholders
+### MLflow Server Not Accessible
+1. Check if containers are running: `docker-compose ps`
+2. Check logs: `docker-compose logs mlflow-ocr` or `docker-compose logs mlflow-llm`
+3. Restart services: `docker-compose restart mlflow-ocr mlflow-llm`
 
-### Performance Metrics
-- **Operation Duration**: Processing time per document
-- **Throughput**: Documents processed per minute
-- **File Size Impact**: Correlation between file size and processing time
+### No Experiments Showing
+1. Make sure you've made at least one API call to the services
+2. Refresh the MLflow UI
+3. Check service logs for MLflow connection errors
 
-### Quality Metrics
-- **Average Confidence**: Overall OCR accuracy
-- **Confidence Distribution**: High/Medium/Low confidence word counts
-- **Filtering Effectiveness**: Words retained vs filtered at different thresholds
+## Best Practices
 
-### Operational Metrics
-- **Success Rate**: Percentage of successful operations
-- **Error Types**: Classification of failures (format errors, processing errors)
-- **Usage Patterns**: File types, sizes, and processing frequency
+### For OCR Service
+- Use confidence thresholds to filter low-quality text
+- Monitor confidence distributions to optimize preprocessing
+- Track file types and sizes for performance optimization
 
-## 📈 MLflow UI Navigation
+### For LLM Service
+- Monitor generation times to optimize model performance
+- Track success rates for different input types
+- Use feedback data for model improvement
 
-### 1. Experiments View
-- Navigate to `http://localhost:5000`
-- Click on "ocr_service_tracking" experiment
-- View list of all OCR operations (runs)
+## Integration with Monitoring
 
-### 2. Run Details
-- Click on any run to see detailed metrics:
-  - **Parameters**: operation_type, timestamp, min_confidence_threshold
-  - **Metrics**: confidence scores, word counts, processing times
-  - **Tags**: Additional metadata
+MLflow data can be integrated with:
+- Prometheus metrics for alerting
+- Grafana dashboards for visualization
+- Custom analytics pipelines for model improvement
 
-### 3. Compare Runs
-- Select multiple runs using checkboxes
-- Click "Compare" to see side-by-side metrics
-- Analyze confidence threshold effectiveness
+## Next Steps
 
-### 4. Charts and Visualizations
-- Use "Chart" view to create custom visualizations
-- Plot confidence vs processing time
-- Analyze trends over time
-
-## 🎪 Stakeholder Presentation Script
-
-### For Professor Antony / Technical Stakeholders
-
-```markdown
-"Let me demonstrate our OCR performance monitoring system:
-
-1. **Real-time Tracking**: Every OCR operation is automatically tracked
-   - Processing time, confidence scores, file metadata
-   - No manual intervention required
-
-2. **Quality Assurance**: Confidence-based filtering ensures high-quality output
-   - Adjustable thresholds per use case
-   - Clear metrics on filtering effectiveness
-
-3. **Performance Optimization**: Data-driven insights for system improvement
-   - Identify bottlenecks and optimization opportunities
-   - Track improvements over time
-
-4. **Error Monitoring**: Comprehensive error tracking and classification
-   - Quick identification of issues
-   - Detailed error context for debugging"
-```
-
-### For Business Stakeholders
-
-```markdown
-"Our OCR system now provides complete visibility into document processing:
-
-1. **Quality Control**: We can guarantee text extraction accuracy
-   - Configurable quality thresholds
-   - Automatic filtering of low-confidence text
-
-2. **Performance Monitoring**: Real-time insights into system performance
-   - Processing speed and throughput metrics
-   - Capacity planning data
-
-3. **Cost Optimization**: Data to optimize processing costs
-   - Identify most efficient confidence thresholds
-   - Resource usage patterns
-
-4. **Reliability**: Comprehensive error tracking ensures system reliability
-   - Proactive issue identification
-   - Detailed failure analysis"
-```
-
-## 🔍 Sample Insights from MLflow Data
-
-### Confidence Threshold Analysis
-```
-Threshold 0%:   100% words retained, 75% average confidence
-Threshold 50%:  85% words retained,  82% average confidence  
-Threshold 70%:  70% words retained,  89% average confidence
-Threshold 90%:  45% words retained,  95% average confidence
-
-Recommendation: Use 70% threshold for optimal quality/completeness balance
-```
-
-### Performance Benchmarks
-```
-Average Processing Time: 1.2 seconds
-Files < 1MB: 0.8 seconds
-Files 1-5MB: 2.1 seconds
-Files > 5MB: 4.5 seconds
-
-Recommendation: Implement file size limits or async processing for large files
-```
-
-### Error Analysis
-```
-Success Rate: 94.2%
-Format Errors: 4.1% (unsupported file types)
-Processing Errors: 1.7% (corrupted files, OCR failures)
-
-Recommendation: Improve file validation and error messaging
-```
-
-## 🛠️ Advanced Features
-
-### Custom Metrics
-The system tracks custom flashcard-specific metrics:
-- Document type classification
-- Text extraction quality scores
-- Processing efficiency metrics
-
-### Experiment Comparison
-Compare different OCR configurations:
-- Different confidence thresholds
-- Various preprocessing techniques
-- Performance across document types
-
-### Automated Reporting
-Generate automated reports for:
-- Daily/weekly performance summaries
-- Quality trend analysis
-- System health reports
-
-## 🎯 Next Steps
-
-After demonstrating MLflow capabilities, we'll implement:
-1. **Prometheus Integration**: System-level metrics collection
-2. **Grafana Dashboards**: Real-time monitoring visualizations
-3. **Alerting System**: Automated notifications for issues
-4. **Custom Metrics**: Flashcard-specific operational metrics
-
-This creates a comprehensive monitoring ecosystem for the entire flashcards application.
+1. Set up automated model retraining based on MLflow data
+2. Implement A/B testing for different model configurations
+3. Create custom MLflow plugins for specialized tracking
+4. Integrate with CI/CD pipelines for model deployment

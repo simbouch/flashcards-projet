@@ -347,13 +347,24 @@ async def extract_text(
             contents = await file.read()
             file_size = len(contents)
 
+            # Determine file type from content_type or filename
+            content_type = file.content_type or ""
+            filename = file.filename or ""
+
+            # If content_type is None, try to determine from filename
+            if not content_type:
+                if filename.lower().endswith('.pdf'):
+                    content_type = 'application/pdf'
+                elif filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff')):
+                    content_type = 'image/unknown'
+
             # Log file metadata
-            ocr_tracker.log_file_metadata(file.filename,
-                                        "pdf" if file.content_type == 'application/pdf' else "image",
+            ocr_tracker.log_file_metadata(filename,
+                                        "pdf" if content_type == 'application/pdf' else "image",
                                         file_size)
 
             # Handle PDF files
-            if file.content_type == 'application/pdf':
+            if content_type == 'application/pdf':
                 logger.info(f"Processing PDF file: {file.filename}")
                 result = extract_text_from_pdf(contents)
 
@@ -375,7 +386,7 @@ async def extract_text(
                 }
 
             # Handle image files
-            elif file.content_type.startswith('image/'):
+            elif content_type.startswith('image/'):
                 logger.info(f"Processing image file: {file.filename}")
 
                 # Load and preprocess image
@@ -421,13 +432,13 @@ async def extract_text(
                 }
 
             else:
-                logger.warning("Rejected unsupported format: {}", file.content_type)
+                logger.warning("Rejected unsupported format: {}", content_type)
                 # Record error metrics
                 ocr_operations_total.labels(status="error_unsupported_format", file_type="unknown").inc()
                 ocr_active_requests.dec()
                 raise HTTPException(
                     status_code=415,
-                    detail=f"Format non supporté : {file.content_type}. Formats supportés: images (PNG, JPG, etc.)" +
+                    detail=f"Format non supporté : {content_type}. Formats supportés: images (PNG, JPG, etc.)" +
                            (" et PDF" if PDF_SUPPORT else "")
                 )
 

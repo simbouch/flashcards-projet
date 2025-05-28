@@ -15,10 +15,11 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - REDIS_URL=redis://redis:6379
-      - MLFLOW_TRACKING_URI=http://host.docker.internal:5000
+      - MLFLOW_TRACKING_URI=http://mlflow-ocr:5000
       - MLFLOW_EXPERIMENT_NAME=ocr_service_tracking
     depends_on:
       - redis
+      - mlflow-ocr
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -43,8 +44,11 @@ services:
       - PYTHONUNBUFFERED=1
       - MODEL_NAME=bigscience/bloom-560m
       - REDIS_URL=redis://redis:6379
+      - MLFLOW_TRACKING_URI=http://mlflow-llm:5001
+      - MLFLOW_EXPERIMENT_NAME=llm_service_tracking
     depends_on:
       - redis
+      - mlflow-llm
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; print(urllib.request.urlopen('http://localhost:8001/health').read())\" || exit 1"]
@@ -100,7 +104,7 @@ services:
       # PRODUCTION: Consider using environment variables or a secrets manager
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-supersecretkey}
       - JWT_ALGORITHM=HS256
-      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=120
       - PYTHONPATH=/app
     depends_on:
       - ocr-service
@@ -162,6 +166,32 @@ services:
       retries: 3
       start_period: 10s
 
+  # MLflow Tracking Server for OCR Service (Comprehensive)
+  mlflow-ocr:
+    build:
+      context: ./mlflow
+      dockerfile: Dockerfile.ocr
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_ocr_data:/mlflow
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+  # MLflow Tracking Server for LLM Service (Minimalistic)
+  mlflow-llm:
+    build:
+      context: ./mlflow
+      dockerfile: Dockerfile.llm
+    ports:
+      - "5001:5001"
+    volumes:
+      - mlflow_llm_data:/mlflow
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
 volumes:
   ocr_logs:
   llm_logs:
@@ -171,3 +201,5 @@ volumes:
   backend_logs:
   frontend_logs:
   redis_data:
+  mlflow_ocr_data:
+  mlflow_llm_data:
