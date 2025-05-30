@@ -193,12 +193,23 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Build ${{ matrix.service }}
+    - name: Build ${{ matrix.service }} (with cache)
+      id: build-with-cache
       uses: docker/build-push-action@v4
+      continue-on-error: true
       with:
         context: ./${{ matrix.service }}
         push: false
         tags: flashcards/${{ matrix.service }}:latest
         cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-to: type=gha,mode=min
+        outputs: type=docker
+
+    - name: Build ${{ matrix.service }} (fallback without cache)
+      if: steps.build-with-cache.outcome == 'failure'
+      uses: docker/build-push-action@v4
+      with:
+        context: ./${{ matrix.service }}
+        push: false
+        tags: flashcards/${{ matrix.service }}:latest
         outputs: type=docker

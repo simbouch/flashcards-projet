@@ -1,7 +1,7 @@
 # frontend_service/Dockerfile
 
 # Build stage
-FROM node:16-alpine as build-stage
+FROM node:16-alpine AS build-stage
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ RUN chmod +x node_modules/.bin/vue-cli-service
 RUN npm run build -- --no-lint
 
 # Production stage
-FROM nginx:stable-alpine as production-stage
+FROM nginx:stable-alpine AS production-stage
 
 # Copy built files from build stage
 COPY --from=build-stage /app/dist /usr/share/nginx/html
