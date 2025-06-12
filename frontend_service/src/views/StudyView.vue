@@ -1,169 +1,251 @@
 <template>
   <div class="study">
-    <v-container>
-      <v-row v-if="loading">
-        <v-col cols="12" class="text-center">
-          <v-progress-circular
-            indeterminate
-            color="primary"
-            size="64"
-          ></v-progress-circular>
-        </v-col>
-      </v-row>
+    <v-container class="py-8">
+      <!-- Loading State -->
+      <div v-if="loading" class="loading-state text-center py-12 animate-fade-in">
+        <v-progress-circular
+          indeterminate
+          color="primary"
+          size="80"
+          width="6"
+          class="mb-4"
+        ></v-progress-circular>
+        <h3 class="text-h5 font-weight-bold mb-2">Loading Study Session</h3>
+        <p class="text-body-1 text-medium-emphasis">Preparing your flashcards...</p>
+      </div>
 
+      <!-- Main Study Interface -->
       <template v-else-if="deck && deck.flashcards && deck.flashcards.length > 0">
-        <v-row>
-          <v-col cols="12">
-            <v-card>
-              <v-card-title class="text-h5">
-                Studying: {{ deck.title }}
-                <v-spacer></v-spacer>
-                <v-btn
-                  color="primary"
-                  text
-                  @click="$router.push(`/decks/${deckId}`)"
-                >
-                  <v-icon left>mdi-arrow-left</v-icon>
-                  Back to Deck
-                </v-btn>
-              </v-card-title>
+        <!-- Header Section -->
+        <div class="study-header mb-8 animate-fade-in">
+          <div class="d-flex align-center justify-space-between flex-wrap gap-4">
+            <div>
+              <h1 class="text-h3 font-weight-bold gradient-text mb-2">{{ deck.title }}</h1>
+              <p class="text-h6 text-medium-emphasis">Study Session in Progress</p>
+            </div>
+            <v-btn
+              variant="outlined"
+              class="modern-btn"
+              @click="$router.push(`/decks/${deckId}`)"
+              size="large"
+              prepend-icon="mdi-arrow-left"
+            >
+              Back to Deck
+            </v-btn>
+          </div>
+        </div>
 
-              <v-card-text>
-                <div class="text-center mb-4">
-                  <div class="text-body-1">
-                    Card {{ currentCardIndex + 1 }} of {{ activeCards.length }}
-                  </div>
-                  <v-progress-linear
-                    :value="(currentCardIndex / activeCards.length) * 100"
-                    color="primary"
-                    class="mt-2"
-                  ></v-progress-linear>
-                  <div class="text-caption mt-1">
-                    <span class="mr-2">Mastered: {{ stats.mastered }}</span>
-                    <span class="mr-2">Fullback: {{ stats.fullback }}</span>
-                    <span>Removed: {{ stats.removed }}</span>
-                  </div>
+        <!-- Progress Section -->
+        <v-row class="mb-6">
+          <v-col cols="12">
+            <v-card class="modern-card-elevated progress-card animate-slide-in-left">
+              <v-card-text class="pa-6">
+                <div class="d-flex align-center justify-space-between mb-4">
+                  <h3 class="text-h5 font-weight-bold">Progress</h3>
+                  <v-chip class="gradient-primary text-white" size="large">
+                    {{ currentCardIndex + 1 }} / {{ activeCards.length }}
+                  </v-chip>
                 </div>
 
-                <!-- Question Card (shown when showAnswer is false) -->
-                <v-card
-                  v-if="!showAnswer"
-                  class="flashcard-container question-card"
-                  elevation="4"
-                  @click="toggleAnswer"
-                >
-                  <div class="flashcard-content">
-                    <v-icon class="question-icon mb-2" large>mdi-help-circle</v-icon>
-                    <div class="text-h6 mb-3 primary--text">Question:</div>
-                    <div class="text-body-1 question-text">{{ currentCard.question }}</div>
-                    <v-chip class="mt-4" color="primary" small>
-                      <v-icon left small>mdi-gesture-tap</v-icon>
-                      Click to see answer
-                    </v-chip>
+                <v-progress-linear
+                  :model-value="(currentCardIndex / activeCards.length) * 100"
+                  color="primary"
+                  height="12"
+                  rounded
+                  class="mb-4"
+                ></v-progress-linear>
+
+                <div class="stats-grid">
+                  <div class="stat-item">
+                    <v-icon color="success" size="24" class="mb-2">mdi-check-circle</v-icon>
+                    <p class="text-h6 font-weight-bold mb-1">{{ stats.mastered + stats.removed }}</p>
+                    <p class="text-caption text-medium-emphasis">Mastered</p>
                   </div>
-                </v-card>
-
-                <!-- Answer Card (shown when showAnswer is true) -->
-                <v-card
-                  v-else
-                  class="flashcard-container answer-card"
-                  elevation="4"
-                  @click="toggleAnswer"
-                >
-                  <div class="flashcard-content">
-                    <v-icon class="answer-icon mb-2" large>mdi-lightbulb-on</v-icon>
-                    <div class="text-h6 mb-3 amber--text text--darken-2">Answer:</div>
-                    <div class="text-body-1 answer-text">{{ currentCard.answer }}</div>
-                    <v-chip class="mt-4" color="amber" small>
-                      <v-icon left small>mdi-gesture-tap</v-icon>
-                      Click to see question
-                    </v-chip>
+                  <div class="stat-item">
+                    <v-icon color="warning" size="24" class="mb-2">mdi-arrow-down-bold-circle</v-icon>
+                    <p class="text-h6 font-weight-bold mb-1">{{ stats.fullback }}</p>
+                    <p class="text-caption text-medium-emphasis">Review Later</p>
                   </div>
-                </v-card>
-
-                <!-- Study controls are always visible -->
-                <div class="text-center mt-6">
-                  <div class="text-h6 mb-3">Study Controls</div>
-                  <div class="study-controls">
-                    <v-tooltip bottom>
-                      <template v-slot:activator="{ on, attrs }">
-                        <v-btn
-                          color="primary"
-                          class="mx-2 px-4 control-btn"
-                          height="50"
-                          v-bind="attrs"
-                          v-on="on"
-                          @click="nextCard"
-                          :loading="saving"
-                        >
-                          <v-icon left>mdi-arrow-right-bold-circle</v-icon>
-                          Next
-                        </v-btn>
-                      </template>
-                      <span>Move card behind the next one</span>
-                    </v-tooltip>
-
-                    <v-tooltip bottom>
-                      <template v-slot:activator="{ on, attrs }">
-                        <v-btn
-                          color="amber darken-2"
-                          class="mx-2 px-4 control-btn"
-                          height="50"
-                          v-bind="attrs"
-                          v-on="on"
-                          @click="fullbackCard"
-                          :loading="saving"
-                        >
-                          <v-icon left>mdi-arrow-down-bold-circle</v-icon>
-                          Fullback <span v-if="currentCardFullbackCount > 0" class="ml-1">({{ currentCardFullbackCount }})</span>
-                        </v-btn>
-                      </template>
-                      <span>Move to end of deck. Second fullback removes card.</span>
-                    </v-tooltip>
-
-                    <v-tooltip bottom>
-                      <template v-slot:activator="{ on, attrs }">
-                        <v-btn
-                          color="green"
-                          class="mx-2 px-4 control-btn"
-                          height="50"
-                          v-bind="attrs"
-                          v-on="on"
-                          @click="downCard"
-                          :loading="saving"
-                        >
-                          <v-icon left>mdi-check-bold</v-icon>
-                          Down
-                        </v-btn>
-                      </template>
-                      <span>Remove card from session (mark as learned)</span>
-                    </v-tooltip>
-
-                    <v-tooltip bottom>
-                      <template v-slot:activator="{ on, attrs }">
-                        <v-btn
-                          color="grey darken-1"
-                          class="mx-2 px-4 control-btn"
-                          height="50"
-                          v-bind="attrs"
-                          v-on="on"
-                          @click="quitStudy"
-                        >
-                          <v-icon left>mdi-exit-to-app</v-icon>
-                          Quit
-                        </v-btn>
-                      </template>
-                      <span>End study session</span>
-                    </v-tooltip>
-                  </div>
-
-                  <div class="text-caption mt-3">
-                    Click on the card to flip between question and answer
+                  <div class="stat-item">
+                    <v-icon color="info" size="24" class="mb-2">mdi-cards</v-icon>
+                    <p class="text-h6 font-weight-bold mb-1">{{ activeCards.length }}</p>
+                    <p class="text-caption text-medium-emphasis">Remaining</p>
                   </div>
                 </div>
               </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
 
+        <!-- Flashcard Display -->
+        <v-row class="mb-6">
+          <v-col cols="12">
+            <div class="flashcard-wrapper">
+              <!-- Question Card -->
+              <transition name="flip" mode="out-in">
+                <v-card
+                  v-if="!showAnswer"
+                  key="question"
+                  class="flashcard-container question-card modern-card-elevated animate-scale-in"
+                  @click="toggleAnswer"
+                  hover
+                >
+                  <div class="card-gradient-overlay question-gradient"></div>
+                  <div class="flashcard-content">
+                    <div class="flashcard-header mb-6">
+                      <v-avatar size="80" class="gradient-primary mb-4 animate-pulse">
+                        <v-icon size="40" color="white">mdi-help-circle</v-icon>
+                      </v-avatar>
+                      <h3 class="text-h4 font-weight-bold text-primary mb-2">Question</h3>
+                    </div>
 
+                    <div class="flashcard-text mb-6">
+                      <p class="text-h5 font-weight-medium text-center">{{ currentCard.question }}</p>
+                    </div>
+
+                    <div class="flashcard-footer">
+                      <v-chip class="gradient-primary text-white" size="large">
+                        <v-icon start>mdi-gesture-tap</v-icon>
+                        Tap to reveal answer
+                      </v-chip>
+                    </div>
+                  </div>
+                </v-card>
+
+                <!-- Answer Card -->
+                <v-card
+                  v-else
+                  key="answer"
+                  class="flashcard-container answer-card modern-card-elevated animate-scale-in"
+                  @click="toggleAnswer"
+                  hover
+                >
+                  <div class="card-gradient-overlay answer-gradient"></div>
+                  <div class="flashcard-content">
+                    <div class="flashcard-header mb-6">
+                      <v-avatar size="80" class="gradient-success mb-4 animate-pulse">
+                        <v-icon size="40" color="white">mdi-lightbulb-on</v-icon>
+                      </v-avatar>
+                      <h3 class="text-h4 font-weight-bold text-success mb-2">Answer</h3>
+                    </div>
+
+                    <div class="flashcard-text mb-6">
+                      <p class="text-h5 font-weight-medium text-center">{{ currentCard.answer }}</p>
+                    </div>
+
+                    <div class="flashcard-footer">
+                      <v-chip class="gradient-success text-white" size="large">
+                        <v-icon start>mdi-gesture-tap</v-icon>
+                        Tap to see question
+                      </v-chip>
+                    </div>
+                  </div>
+                </v-card>
+              </transition>
+            </div>
+          </v-col>
+        </v-row>
+
+        <!-- Study Controls -->
+        <v-row>
+          <v-col cols="12">
+            <v-card class="modern-card-elevated controls-card animate-slide-in-right">
+              <v-card-text class="pa-6">
+                <h3 class="text-h5 font-weight-bold text-center mb-6">Study Controls</h3>
+
+                <div class="controls-grid">
+                  <!-- Next Button -->
+                  <v-tooltip location="top">
+                    <template v-slot:activator="{ props }">
+                      <v-btn
+                        class="modern-btn control-btn"
+                        color="primary"
+                        size="large"
+                        v-bind="props"
+                        @click="nextCard"
+                        :loading="saving"
+                        block
+                      >
+                        <v-icon start>mdi-arrow-right-bold-circle</v-icon>
+                        Next
+                      </v-btn>
+                    </template>
+                    <span>Move card behind the next one</span>
+                  </v-tooltip>
+
+                  <!-- Fullback Button -->
+                  <v-tooltip location="top">
+                    <template v-slot:activator="{ props }">
+                      <v-btn
+                        class="modern-btn control-btn"
+                        color="warning"
+                        size="large"
+                        v-bind="props"
+                        @click="fullbackCard"
+                        :loading="saving"
+                        block
+                      >
+                        <v-icon start>mdi-arrow-down-bold-circle</v-icon>
+                        Review Later
+                        <v-chip
+                          v-if="currentCardFullbackCount > 0"
+                          class="ml-2"
+                          size="small"
+                          color="white"
+                        >
+                          {{ currentCardFullbackCount }}
+                        </v-chip>
+                      </v-btn>
+                    </template>
+                    <span>Move to end of deck. Second review removes card.</span>
+                  </v-tooltip>
+
+                  <!-- Mastered Button -->
+                  <v-tooltip location="top">
+                    <template v-slot:activator="{ props }">
+                      <v-btn
+                        class="modern-btn control-btn"
+                        color="success"
+                        size="large"
+                        v-bind="props"
+                        @click="downCard"
+                        :loading="saving"
+                        block
+                      >
+                        <v-icon start>mdi-check-bold</v-icon>
+                        Mastered
+                      </v-btn>
+                    </template>
+                    <span>Mark as learned and remove from session</span>
+                  </v-tooltip>
+
+                  <!-- Quit Button -->
+                  <v-tooltip location="top">
+                    <template v-slot:activator="{ props }">
+                      <v-btn
+                        variant="outlined"
+                        class="modern-btn control-btn"
+                        color="error"
+                        size="large"
+                        v-bind="props"
+                        @click="quitStudy"
+                        block
+                      >
+                        <v-icon start>mdi-exit-to-app</v-icon>
+                        End Session
+                      </v-btn>
+                    </template>
+                    <span>End study session and return to deck</span>
+                  </v-tooltip>
+                </div>
+
+                <div class="text-center mt-6">
+                  <p class="text-body-2 text-medium-emphasis">
+                    <v-icon size="16" class="mr-1">mdi-information</v-icon>
+                    Tap the flashcard to flip between question and answer
+                  </p>
+                </div>
+              </v-card-text>
             </v-card>
           </v-col>
         </v-row>
@@ -653,70 +735,245 @@ export default {
 </script>
 
 <style scoped>
+/* Header Section */
+.study-header {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border-radius: var(--border-radius-2xl);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Progress Card */
+.progress-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  backdrop-filter: blur(10px);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 1rem;
+  border-radius: var(--border-radius-lg);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all var(--transition-normal);
+}
+
+.stat-item:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Flashcard Styles */
+.flashcard-wrapper {
+  perspective: 1000px;
+  min-height: 500px;
+}
+
 .flashcard-container {
-  height: 350px;
+  height: 500px;
   cursor: pointer;
-  margin: 20px 0;
-  border-radius: 12px;
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1) !important;
-  transition: all 0.3s ease;
+  border-radius: var(--border-radius-2xl);
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+  backdrop-filter: blur(20px);
 }
 
 .flashcard-container:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15) !important;
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: var(--shadow-2xl);
 }
 
-.question-card {
-  background-color: #e3f2fd;
-  border: 2px solid #2196F3;
+.card-gradient-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  z-index: 1;
 }
 
-.answer-card {
-  background-color: #fff8e1;
-  border: 2px solid #FFC107;
+.question-gradient {
+  background: var(--gradient-primary);
+}
+
+.answer-gradient {
+  background: var(--gradient-success);
 }
 
 .flashcard-content {
   height: 100%;
-  width: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 30px;
+  padding: 3rem;
   text-align: center;
+  position: relative;
+  z-index: 2;
 }
 
-.question-text, .answer-text {
-  font-size: 1.2rem;
-  line-height: 1.6;
+.flashcard-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.flashcard-text {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   max-width: 100%;
   overflow-wrap: break-word;
-  margin-bottom: 20px;
+  word-break: break-word;
 }
 
-.question-icon {
-  color: #2196F3;
+.flashcard-text p {
+  line-height: 1.6;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
-.answer-icon {
-  color: #FFC107;
+.flashcard-footer {
+  margin-top: auto;
 }
 
-.study-controls {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
+/* Controls Card */
+.controls-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  backdrop-filter: blur(10px);
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
 }
 
 .control-btn {
-  transition: all 0.3s ease;
-  margin-bottom: 10px;
+  height: 60px !important;
+  font-weight: 600 !important;
+  transition: all var(--transition-normal) !important;
 }
 
 .control-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-5px) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* Flip Animation */
+.flip-enter-active,
+.flip-leave-active {
+  transition: all 0.6s ease-in-out;
+}
+
+.flip-enter-from {
+  opacity: 0;
+  transform: rotateY(-90deg) scale(0.8);
+}
+
+.flip-leave-to {
+  opacity: 0;
+  transform: rotateY(90deg) scale(0.8);
+}
+
+/* Loading State */
+.loading-state {
+  padding: 4rem 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .study-header {
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .study-header .d-flex {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .flashcard-container {
+    height: 400px;
+  }
+
+  .flashcard-content {
+    padding: 2rem;
+  }
+
+  .controls-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .stat-item {
+    padding: 0.75rem;
+  }
+}
+
+/* Dark mode adjustments */
+.v-theme--dark .study-header {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+}
+
+.v-theme--dark .progress-card,
+.v-theme--dark .controls-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
+}
+
+.v-theme--dark .flashcard-container {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+}
+
+.v-theme--dark .stat-item {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Animation improvements */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.flashcard-header .v-avatar {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Custom scrollbar for flashcard text */
+.flashcard-text p::-webkit-scrollbar {
+  width: 6px;
+}
+
+.flashcard-text p::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.flashcard-text p::-webkit-scrollbar-thumb {
+  background: var(--gradient-primary);
+  border-radius: 3px;
 }
 </style>

@@ -1,127 +1,176 @@
 <template>
   <div class="decks">
-    <v-container>
+    <v-container class="py-8">
+      <!-- Header Section -->
+      <div class="header-section mb-8 animate-fade-in">
+        <div class="d-flex align-center justify-space-between flex-wrap gap-4">
+          <div>
+            <h1 class="text-h3 font-weight-bold gradient-text mb-2">My Flashcard Decks</h1>
+            <p class="text-h6 text-medium-emphasis">
+              Manage and study your personalized flashcard collections
+            </p>
+          </div>
+          <div class="d-flex gap-2">
+            <v-btn
+              class="modern-btn-primary"
+              @click="showCreateDialog = true"
+              size="large"
+              prepend-icon="mdi-plus"
+            >
+              Create Deck
+            </v-btn>
+            <v-btn
+              variant="outlined"
+              class="modern-btn"
+              @click="goToMain"
+              size="large"
+              prepend-icon="mdi-arrow-left"
+            >
+              Back to Main
+            </v-btn>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Section -->
       <v-row>
         <v-col cols="12">
-          <v-card>
-            <v-card-title class="text-h5">
-              My Flashcard Decks
-              <v-spacer></v-spacer>
-              <v-btn
-                color="primary"
-                @click="showCreateDialog = true"
-              >
-                <v-icon left>mdi-plus</v-icon>
-                Create Deck
-              </v-btn>
-            </v-card-title>
+          <v-card class="modern-card-elevated">
+            <v-card-text class="pa-6">
 
-            <v-card-text>
+              <!-- Error Alert -->
               <v-alert
                 v-if="decksStore.error"
                 type="error"
-                dismissible
+                variant="tonal"
+                class="mb-6 modern-card"
+                closable
                 @click:close="decksStore.clearError()"
               >
+                <template v-slot:prepend>
+                  <v-icon>mdi-alert-circle</v-icon>
+                </template>
                 {{ decksStore.error }}
               </v-alert>
 
-              <v-row v-if="decksStore.loading">
-                <v-col cols="12" class="text-center">
-                  <v-progress-circular
-                    indeterminate
-                    color="primary"
-                  ></v-progress-circular>
-                </v-col>
-              </v-row>
+              <!-- Loading State -->
+              <div v-if="decksStore.loading" class="text-center py-12 animate-fade-in">
+                <v-progress-circular
+                  indeterminate
+                  color="primary"
+                  size="64"
+                  width="6"
+                  class="mb-4"
+                ></v-progress-circular>
+                <p class="text-h6 text-medium-emphasis">Loading your decks...</p>
+              </div>
 
-              <v-row v-else-if="decksStore.decks.length === 0">
-                <v-col cols="12" class="text-center">
-                  <p>You don't have any flashcard decks yet.</p>
-                  <v-btn
-                    color="primary"
-                    @click="showCreateDialog = true"
-                    class="mt-2"
-                  >
-                    Create Your First Deck
-                  </v-btn>
-                </v-col>
-              </v-row>
-
-              <v-row v-else>
-                <v-col
-                  v-for="deck in decksStore.decks"
-                  :key="deck.id"
-                  cols="12"
-                  sm="6"
-                  md="4"
+              <!-- Empty State -->
+              <div v-else-if="decksStore.decks.length === 0" class="empty-state text-center py-12 animate-scale-in">
+                <v-avatar size="120" class="gradient-primary mb-6 animate-pulse">
+                  <v-icon size="60" color="white">mdi-cards-outline</v-icon>
+                </v-avatar>
+                <h3 class="text-h4 font-weight-bold mb-4">No Decks Yet</h3>
+                <p class="text-h6 text-medium-emphasis mb-6 max-width-400 mx-auto">
+                  Start your learning journey by creating your first flashcard deck!
+                </p>
+                <v-btn
+                  class="modern-btn-primary"
+                  @click="showCreateDialog = true"
+                  size="large"
+                  prepend-icon="mdi-plus"
                 >
-                  <v-card
-                    class="deck-card"
-                    outlined
-                    @click="viewDeck(deck)"
+                  Create Your First Deck
+                </v-btn>
+              </div>
+
+              <!-- Decks Grid -->
+              <div v-else class="decks-grid">
+                <v-row>
+                  <v-col
+                    v-for="(deck, index) in decksStore.decks"
+                    :key="deck.id"
+                    cols="12"
+                    sm="6"
+                    lg="4"
+                    class="animate-scale-in"
+                    :style="{ animationDelay: `${index * 0.1}s` }"
                   >
-                    <v-card-title>
-                      {{ deck.title }}
-                      <v-chip
-                        v-if="deck.is_public"
-                        color="green"
-                        small
-                        class="ml-2"
-                      >
-                        Public
-                      </v-chip>
-                    </v-card-title>
+                    <v-card
+                      class="deck-card modern-card-elevated"
+                      @click="viewDeck(deck)"
+                      hover
+                    >
+                      <!-- Card Header -->
+                      <div class="card-gradient-overlay"></div>
+                      <v-card-title class="pa-4 pb-2">
+                        <div class="d-flex align-center justify-space-between w-100">
+                          <h3 class="text-h6 font-weight-bold text-truncate">{{ deck.title }}</h3>
+                          <v-chip
+                            v-if="deck.is_public"
+                            color="success"
+                            size="small"
+                            variant="flat"
+                          >
+                            <v-icon start size="16">mdi-earth</v-icon>
+                            Public
+                          </v-chip>
+                        </div>
+                      </v-card-title>
 
-                    <v-card-subtitle v-if="deck.description">
-                      {{ deck.description }}
-                    </v-card-subtitle>
+                      <!-- Card Content -->
+                      <v-card-text class="pa-4 pt-0">
+                        <p v-if="deck.description" class="text-body-2 text-medium-emphasis mb-3 line-clamp-2">
+                          {{ deck.description }}
+                        </p>
+                        <div class="d-flex align-center text-caption text-medium-emphasis">
+                          <v-icon size="16" class="mr-1">mdi-calendar</v-icon>
+                          Created {{ formatDate(deck.created_at) }}
+                        </div>
+                      </v-card-text>
 
-                    <v-card-text>
-                      <div class="text-caption">
-                        Created: {{ formatDate(deck.created_at) }}
-                      </div>
-                    </v-card-text>
+                      <!-- Card Actions -->
+                      <v-card-actions class="pa-4 pt-0">
+                        <v-btn
+                          variant="flat"
+                          color="primary"
+                          class="modern-btn flex-grow-1"
+                          @click.stop="studyDeck(deck)"
+                          prepend-icon="mdi-book-open-variant"
+                        >
+                          Study
+                        </v-btn>
 
-                    <v-card-actions>
-                      <v-btn
-                        text
-                        color="primary"
-                        @click.stop="studyDeck(deck)"
-                      >
-                        <v-icon left>mdi-book-open-variant</v-icon>
-                        Study
-                      </v-btn>
-
-                      <v-spacer></v-spacer>
-
-                      <v-btn
-                        icon
-                        @click.stop="editDeck(deck)"
-                      >
-                        <v-icon>mdi-pencil</v-icon>
-                      </v-btn>
-
-                      <v-btn
-                        icon
-                        @click.stop="deleteDeck(deck)"
-                      >
-                        <v-icon>mdi-delete</v-icon>
-                      </v-btn>
-                    </v-card-actions>
-                  </v-card>
-                </v-col>
-              </v-row>
+                        <v-menu offset-y>
+                          <template v-slot:activator="{ props }">
+                            <v-btn
+                              icon="mdi-dots-vertical"
+                              variant="text"
+                              v-bind="props"
+                              @click.stop
+                            ></v-btn>
+                          </template>
+                          <v-list class="modern-card">
+                            <v-list-item @click="editDeck(deck)" class="modern-btn">
+                              <template v-slot:prepend>
+                                <v-icon>mdi-pencil</v-icon>
+                              </template>
+                              <v-list-item-title>Edit</v-list-item-title>
+                            </v-list-item>
+                            <v-list-item @click="deleteDeck(deck)" class="modern-btn text-error">
+                              <template v-slot:prepend>
+                                <v-icon>mdi-delete</v-icon>
+                              </template>
+                              <v-list-item-title>Delete</v-list-item-title>
+                            </v-list-item>
+                          </v-list>
+                        </v-menu>
+                      </v-card-actions>
+                    </v-card>
+                  </v-col>
+                </v-row>
+              </div>
             </v-card-text>
-            <v-card-actions>
-              <v-btn
-                color="secondary"
-                @click="goToMain"
-              >
-                <v-icon left>mdi-arrow-left</v-icon>
-                Back to Main
-              </v-btn>
-            </v-card-actions>
           </v-card>
         </v-col>
       </v-row>
@@ -365,13 +414,110 @@ export default {
 </script>
 
 <style scoped>
+/* Header Section */
+.header-section {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border-radius: var(--border-radius-2xl);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Empty State */
+.empty-state {
+  padding: 4rem 2rem;
+}
+
+.max-width-400 {
+  max-width: 400px;
+}
+
+/* Deck Cards */
 .deck-card {
   height: 100%;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
 }
 
 .deck-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: var(--shadow-2xl);
+}
+
+.card-gradient-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Decks Grid */
+.decks-grid {
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header-section {
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .header-section .d-flex {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+
+  .deck-card {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Dark mode adjustments */
+.v-theme--dark .header-section {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+}
+
+/* Animation improvements */
+.deck-card .v-card-actions .v-btn {
+  transition: all var(--transition-fast);
+}
+
+.deck-card:hover .v-card-actions .v-btn {
+  transform: translateY(-2px);
+}
+
+/* Menu styling */
+.v-menu .v-list {
+  min-width: 150px;
+}
+
+.v-menu .v-list-item {
+  transition: all var(--transition-fast);
+}
+
+.v-menu .v-list-item:hover {
+  transform: translateX(5px);
 }
 </style>
