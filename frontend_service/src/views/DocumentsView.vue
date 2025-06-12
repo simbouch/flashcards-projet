@@ -338,9 +338,9 @@ export default {
 
       const statusMap = {
         'uploaded': 'blue',
-        'ocr_processing': 'amber',
+        'ocr_processing': 'info',
         'ocr_complete': 'light-blue',
-        'flashcard_generating': 'orange',
+        'flashcard_generating': 'primary',
         'flashcard_complete': 'green',
         'error': 'red'
       }

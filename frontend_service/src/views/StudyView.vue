@@ -320,7 +320,7 @@
 
             <v-list-item>
               <v-list-item-icon>
-                <v-icon color="amber">mdi-arrow-down-bold-circle</v-icon>
+                <v-icon color="info">mdi-arrow-down-bold-circle</v-icon>
               </v-list-item-icon>
               <v-list-item-content>
                 <v-list-item-title>Fullback: {{ stats.fullback }}</v-list-item-title>

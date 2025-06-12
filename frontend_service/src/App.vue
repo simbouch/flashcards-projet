@@ -57,48 +57,35 @@
               Public Decks
             </v-btn>
 
-            <!-- User Menu with Visible Logout -->
-            <div class="d-flex align-center">
-              <v-menu offset-y>
-                <template v-slot:activator="{ props }">
-                  <v-btn
-                    variant="text"
-                    v-bind="props"
-                    class="modern-btn mx-1"
-                    prepend-icon="mdi-account-circle"
-                  >
-                    Account
-                    <v-icon class="ml-1">mdi-chevron-down</v-icon>
-                  </v-btn>
-                </template>
-                <v-list class="modern-card">
-                  <v-list-item class="modern-btn">
-                    <template v-slot:prepend>
-                      <v-icon>mdi-account</v-icon>
-                    </template>
-                    <v-list-item-title>Profile</v-list-item-title>
-                  </v-list-item>
-                  <v-divider></v-divider>
-                  <v-list-item @click="logout" class="modern-btn text-error">
-                    <template v-slot:prepend>
-                      <v-icon>mdi-logout</v-icon>
-                    </template>
-                    <v-list-item-title>Logout</v-list-item-title>
-                  </v-list-item>
-                </v-list>
-              </v-menu>
-
-              <!-- Prominent Logout Button -->
-              <v-btn
-                variant="outlined"
-                class="modern-btn ml-2"
-                @click="logout"
-                prepend-icon="mdi-logout"
-                color="error"
-              >
-                Logout
-              </v-btn>
-            </div>
+            <!-- User Menu -->
+            <v-menu offset-y>
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  variant="text"
+                  v-bind="props"
+                  class="modern-btn mx-1"
+                  prepend-icon="mdi-account-circle"
+                >
+                  Account
+                  <v-icon class="ml-1">mdi-chevron-down</v-icon>
+                </v-btn>
+              </template>
+              <v-list class="modern-card">
+                <v-list-item @click="$router.push('/profile')" class="modern-btn">
+                  <template v-slot:prepend>
+                    <v-icon>mdi-account</v-icon>
+                  </template>
+                  <v-list-item-title>Profile</v-list-item-title>
+                </v-list-item>
+                <v-divider></v-divider>
+                <v-list-item @click="logout" class="modern-btn text-error">
+                  <template v-slot:prepend>
+                    <v-icon color="error">mdi-logout</v-icon>
+                  </template>
+                  <v-list-item-title class="text-error font-weight-bold">Logout</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
           </template>
 
           <template v-else>
