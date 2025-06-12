@@ -57,28 +57,48 @@
               Public Decks
             </v-btn>
 
-            <!-- User Menu -->
-            <v-menu offset-y>
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  icon
-                  v-bind="props"
-                  class="ml-2"
-                >
-                  <v-avatar size="40" class="gradient-secondary">
-                    <v-icon color="white">mdi-account-circle</v-icon>
-                  </v-avatar>
-                </v-btn>
-              </template>
-              <v-list class="modern-card">
-                <v-list-item @click="logout" class="modern-btn">
-                  <template v-slot:prepend>
-                    <v-icon>mdi-logout</v-icon>
-                  </template>
-                  <v-list-item-title>Logout</v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-menu>
+            <!-- User Menu with Visible Logout -->
+            <div class="d-flex align-center">
+              <v-menu offset-y>
+                <template v-slot:activator="{ props }">
+                  <v-btn
+                    variant="text"
+                    v-bind="props"
+                    class="modern-btn mx-1"
+                    prepend-icon="mdi-account-circle"
+                  >
+                    Account
+                    <v-icon class="ml-1">mdi-chevron-down</v-icon>
+                  </v-btn>
+                </template>
+                <v-list class="modern-card">
+                  <v-list-item class="modern-btn">
+                    <template v-slot:prepend>
+                      <v-icon>mdi-account</v-icon>
+                    </template>
+                    <v-list-item-title>Profile</v-list-item-title>
+                  </v-list-item>
+                  <v-divider></v-divider>
+                  <v-list-item @click="logout" class="modern-btn text-error">
+                    <template v-slot:prepend>
+                      <v-icon>mdi-logout</v-icon>
+                    </template>
+                    <v-list-item-title>Logout</v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+
+              <!-- Prominent Logout Button -->
+              <v-btn
+                variant="outlined"
+                class="modern-btn ml-2"
+                @click="logout"
+                prepend-icon="mdi-logout"
+                color="error"
+              >
+                Logout
+              </v-btn>
+            </div>
           </template>
 
           <template v-else>
@@ -186,10 +206,15 @@
         <v-list-item
           v-if="isAuthenticated"
           @click="logout"
-          class="modern-btn mb-2"
+          class="modern-btn mb-2 logout-btn"
           prepend-icon="mdi-logout"
           title="Logout"
-        ></v-list-item>
+        >
+          <template v-slot:prepend>
+            <v-icon color="error">mdi-logout</v-icon>
+          </template>
+          <v-list-item-title class="text-error font-weight-bold">Logout</v-list-item-title>
+        </v-list-item>
 
         <template v-if="!isAuthenticated">
           <v-divider class="my-4"></v-divider>
@@ -217,15 +242,17 @@
     </v-main>
 
     <!-- Modern Footer -->
-    <v-footer class="gradient-primary text-center py-4">
-      <div class="text-white">
-        <p class="mb-1 font-weight-medium">
-          {{ new Date().getFullYear() }} — <strong>FlashCards App</strong>
-        </p>
-        <p class="text-caption mb-0 opacity-80">
-          Powered by AI • Built with ❤️
-        </p>
-      </div>
+    <v-footer class="gradient-primary py-4">
+      <v-container>
+        <div class="text-center text-white w-100">
+          <p class="mb-1 font-weight-medium text-center">
+            {{ new Date().getFullYear() }} — <strong>FlashCards App</strong>
+          </p>
+          <p class="text-caption mb-0 opacity-80 text-center">
+            Powered by AI • Built with ❤️
+          </p>
+        </div>
+      </v-container>
     </v-footer>
   </v-app>
 </template>
@@ -342,5 +369,29 @@ export default {
 .v-navigation-drawer ::-webkit-scrollbar-thumb {
   background: var(--gradient-primary);
   border-radius: 3px;
+}
+
+/* Footer styling */
+.v-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.v-footer .v-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+/* Logout button styling */
+.logout-btn {
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--border-radius-lg);
+}
+
+.logout-btn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
 }
 </style>

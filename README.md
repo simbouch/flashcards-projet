@@ -11,6 +11,36 @@
 
 FlashCards AI is a modern, full-stack application that revolutionizes the way you create and study flashcards. By leveraging advanced OCR (Optical Character Recognition) and AI technologies, it automatically extracts text from your documents and generates intelligent question-answer pairs for optimal learning.
 
+### 🧠 Learning Methodology & Approach
+
+FlashCards AI implements a scientifically-backed learning methodology that combines **spaced repetition**, **active recall**, and **AI-powered content generation** to maximize learning efficiency and retention:
+
+#### **Spaced Repetition System**
+- **Adaptive Review Scheduling**: Cards are automatically scheduled for review based on your performance, with difficult cards appearing more frequently
+- **Forgetting Curve Optimization**: The system leverages Hermann Ebbinghaus's forgetting curve research to present cards at optimal intervals
+- **Long-term Retention Focus**: Gradually increases intervals between reviews as you master content, moving knowledge from short-term to long-term memory
+
+#### **Active Recall Learning**
+- **Question-First Approach**: Forces your brain to actively retrieve information rather than passively reading
+- **Immediate Feedback Loop**: Instant verification of answers reinforces correct knowledge and corrects misconceptions
+- **Confidence-Based Progression**: Self-assessment options (Next, Review Later, Mastered) allow you to control the learning pace
+
+#### **AI-Powered Question Generation**
+- **Intelligent Content Analysis**: Advanced NLP algorithms analyze your documents to identify key concepts, facts, and relationships
+- **Contextual Question Creation**: Generates questions that test understanding rather than mere memorization
+- **Multiple Question Types**: Creates various question formats including factual recall, conceptual understanding, and application-based queries
+- **Difficulty Calibration**: Automatically adjusts question complexity based on content depth and user progress
+
+#### **Study Workflow & Progression**
+1. **Document Processing**: Upload PDFs or images → OCR extracts text with high accuracy
+2. **AI Analysis**: Machine learning models identify learning objectives and key information
+3. **Smart Card Generation**: AI creates targeted question-answer pairs optimized for retention
+4. **Adaptive Study Sessions**: Dynamic presentation based on your performance and confidence levels
+5. **Progress Tracking**: Comprehensive analytics show mastery levels and learning velocity
+6. **Continuous Optimization**: System learns from your interactions to improve future question generation
+
+This methodology ensures that learners not only memorize information but develop deep understanding and long-lasting retention of the material.
+
 ### ✨ Key Features
 
 - 🤖 **AI-Powered Flashcard Generation** - Automatically create Q&A pairs from your documents
@@ -324,6 +354,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Vue.js](https://vuejs.org/) and [Vuetify](https://vuetifyjs.com/) for the beautiful frontend
 - [FastAPI](https://fastapi.tiangolo.com/) for the robust backend framework
 - [MLflow](https://mlflow.org/) for ML experiment tracking
+
+## 👨‍💻 Developer
+
+This project was developed by **Bouchaib Khribech**.
+
+🌐 **Portfolio**: [khribech-b.vercel.app](https://khribech-b.vercel.app/)
+
+Passionate about AI, machine learning, and creating innovative educational technology solutions that make learning more effective and accessible.
 
 ---
 

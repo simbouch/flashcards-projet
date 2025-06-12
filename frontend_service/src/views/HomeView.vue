@@ -29,7 +29,7 @@
                 <p class="text-caption">AI-Powered</p>
               </div>
               <div class="stat-item text-center">
-                <v-icon size="32" class="text-warning mb-2">mdi-chart-line</v-icon>
+                <v-icon size="32" class="text-info mb-2">mdi-chart-line</v-icon>
                 <p class="text-h6 font-weight-bold mb-1">Effective</p>
                 <p class="text-caption">Track Progress</p>
               </div>
@@ -112,7 +112,7 @@
             <div class="card-gradient-overlay"></div>
             <v-card-text class="pa-6 position-relative">
               <div class="feature-icon mb-4">
-                <v-avatar size="64" class="gradient-warning">
+                <v-avatar size="64" class="gradient-info">
                   <v-icon size="32" color="white">mdi-cards-outline</v-icon>
                 </v-avatar>
               </div>
@@ -236,19 +236,19 @@
               </v-timeline-item>
 
               <v-timeline-item
-                dot-color="warning"
+                dot-color="info"
                 size="large"
                 class="animate-slide-in-left animate-delay-800"
               >
                 <template v-slot:icon>
-                  <v-avatar size="60" class="gradient-warning">
+                  <v-avatar size="60" class="gradient-info">
                     <v-icon size="30" color="white">mdi-robot</v-icon>
                   </v-avatar>
                 </template>
                 <v-card class="modern-card ml-4">
                   <v-card-text class="pa-6">
                     <div class="d-flex align-center mb-3">
-                      <v-chip class="gradient-warning text-white mr-3" size="small">Step 3</v-chip>
+                      <v-chip class="gradient-info text-white mr-3" size="small">Step 3</v-chip>
                       <h3 class="text-h5 font-weight-bold">AI-Generated Flashcards</h3>
                     </div>
                     <p class="text-body-1 text-medium-emphasis mb-0">

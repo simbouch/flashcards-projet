@@ -62,7 +62,7 @@
                     <p class="text-caption text-medium-emphasis">Mastered</p>
                   </div>
                   <div class="stat-item">
-                    <v-icon color="warning" size="24" class="mb-2">mdi-arrow-down-bold-circle</v-icon>
+                    <v-icon color="info" size="24" class="mb-2">mdi-arrow-down-bold-circle</v-icon>
                     <p class="text-h6 font-weight-bold mb-1">{{ stats.fullback }}</p>
                     <p class="text-caption text-medium-emphasis">Review Later</p>
                   </div>
@@ -123,10 +123,10 @@
                   <div class="card-gradient-overlay answer-gradient"></div>
                   <div class="flashcard-content">
                     <div class="flashcard-header mb-6">
-                      <v-avatar size="80" class="gradient-success mb-4 animate-pulse">
+                      <v-avatar size="80" class="gradient-info mb-4 animate-pulse">
                         <v-icon size="40" color="white">mdi-lightbulb-on</v-icon>
                       </v-avatar>
-                      <h3 class="text-h4 font-weight-bold text-success mb-2">Answer</h3>
+                      <h3 class="text-h4 font-weight-bold text-info mb-2">Answer</h3>
                     </div>
 
                     <div class="flashcard-text mb-6">
@@ -134,7 +134,7 @@
                     </div>
 
                     <div class="flashcard-footer">
-                      <v-chip class="gradient-success text-white" size="large">
+                      <v-chip class="gradient-info text-white" size="large">
                         <v-icon start>mdi-gesture-tap</v-icon>
                         Tap to see question
                       </v-chip>
@@ -178,7 +178,7 @@
                     <template v-slot:activator="{ props }">
                       <v-btn
                         class="modern-btn control-btn"
-                        color="warning"
+                        color="info"
                         size="large"
                         v-bind="props"
                         @click="fullbackCard"
@@ -813,7 +813,7 @@ export default {
 }
 
 .answer-gradient {
-  background: var(--gradient-success);
+  background: var(--gradient-info);
 }
 
 .flashcard-content {
