@@ -1,186 +1,246 @@
 <template>
-  <div class="deck-detail">
-    <v-container>
-      <v-row v-if="loading">
-        <v-col cols="12" class="text-center">
-          <v-progress-circular
-            indeterminate
-            color="primary"
-            size="64"
-          ></v-progress-circular>
-        </v-col>
-      </v-row>
+  <div class="deck-detail-view">
+    <v-container class="py-8">
+      <!-- Loading State -->
+      <div v-if="loading" class="text-center py-12 animate-fade-in">
+        <v-progress-circular
+          color="primary"
+          size="64"
+          width="6"
+          indeterminate
+          class="mb-4"
+        ></v-progress-circular>
+        <p class="text-h6 text-medium-emphasis">Loading deck details...</p>
+      </div>
 
+      <!-- Deck Content -->
       <template v-else-if="deck">
-        <v-row>
-          <v-col cols="12">
-            <v-card>
-              <v-card-title class="text-h4">
-                {{ deck.title }}
-                <v-chip
-                  v-if="deck.is_public"
-                  color="green"
-                  small
-                  class="ml-2"
-                >
-                  Public
-                </v-chip>
-              </v-card-title>
-
-              <v-card-subtitle v-if="deck.description">
-                {{ deck.description }}
-              </v-card-subtitle>
-
-              <v-card-text>
-                <div class="text-body-2">
-                  Created: {{ formatDate(deck.created_at) }}
-                </div>
-
-                <v-divider class="my-4"></v-divider>
-
-                <div class="d-flex justify-space-between align-center mb-4">
-                  <div class="text-h6">
-                    Flashcards ({{ deck.flashcards ? deck.flashcards.length : 0 }})
+        <v-row justify="center">
+          <v-col cols="12" md="10" lg="8">
+            <!-- Deck Header -->
+            <v-card class="modern-card mb-6 animate-slide-in-up">
+              <div class="gradient-primary pa-6">
+                <div class="d-flex align-center justify-space-between">
+                  <div class="d-flex align-center">
+                    <v-avatar size="64" class="gradient-secondary mr-4">
+                      <v-icon size="32" color="white">mdi-cards-outline</v-icon>
+                    </v-avatar>
+                    <div>
+                      <h1 class="text-h3 font-weight-bold text-white mb-2">{{ deck.title }}</h1>
+                      <div class="d-flex align-center gap-2">
+                        <v-chip
+                          v-if="deck.is_public"
+                          class="gradient-success text-white"
+                          size="small"
+                        >
+                          <v-icon start size="16">mdi-earth</v-icon>
+                          Public
+                        </v-chip>
+                        <v-chip
+                          v-if="isSystemDeck"
+                          class="gradient-info text-white"
+                          size="small"
+                        >
+                          <v-icon start size="16">mdi-star</v-icon>
+                          Native
+                        </v-chip>
+                      </div>
+                    </div>
                   </div>
+                </div>
+              </div>
 
-                  <div>
-                    <v-btn
-                      color="grey darken-1"
-                      @click="goBack"
-                      class="mr-2 mb-2"
-                    >
-                      <v-icon left>mdi-arrow-left</v-icon>
-                      Back
-                    </v-btn>
+              <v-card-text class="pa-6">
+                <p v-if="deck.description" class="text-h6 mb-4">{{ deck.description }}</p>
 
-                    <v-btn
-                      color="primary"
-                      @click="startStudySession"
-                      :disabled="!deck.flashcards || deck.flashcards.length === 0"
-                      class="mr-2 mb-2"
-                    >
-                      <v-icon left>mdi-book-open-variant</v-icon>
-                      Study
-                    </v-btn>
-
-                    <v-btn
-                      color="amber darken-2"
-                      to="/study-history"
-                      class="mr-2 mb-2"
-                    >
-                      <v-icon left>mdi-history</v-icon>
-                      Study History
-                    </v-btn>
-
-                    <v-btn
-                      color="secondary"
-                      @click="showAddCardDialog = true"
-                      v-if="!isSystemDeck"
-                      class="mr-2 mb-2"
-                    >
-                      <v-icon left>mdi-plus</v-icon>
-                      Add Card
-                    </v-btn>
-
-                    <v-btn
-                      color="error"
-                      @click="confirmDeleteDeck"
-                      v-if="!isSystemDeck"
-                      class="mb-2"
-                    >
-                      <v-icon left>mdi-delete</v-icon>
-                      Delete Deck
-                    </v-btn>
+                <!-- Deck Stats -->
+                <div class="d-flex align-center justify-space-between mb-4">
+                  <div class="d-flex align-center">
+                    <v-icon size="20" class="text-medium-emphasis mr-2">mdi-calendar</v-icon>
+                    <span class="text-body-2 text-medium-emphasis">Created: {{ formatDate(deck.created_at) }}</span>
+                  </div>
+                  <div class="d-flex align-center">
+                    <v-icon size="20" class="text-medium-emphasis mr-2">mdi-card-multiple</v-icon>
+                    <span class="text-body-2 text-medium-emphasis">{{ deck.flashcards ? deck.flashcards.length : 0 }} cards</span>
                   </div>
                 </div>
 
+                <!-- Action Buttons -->
+                <div class="d-flex flex-wrap gap-2 mb-6">
+                  <v-btn
+                    class="modern-btn"
+                    color="grey"
+                    variant="outlined"
+                    @click="goBack"
+                    prepend-icon="mdi-arrow-left"
+                  >
+                    Back
+                  </v-btn>
+
+                  <v-btn
+                    class="modern-btn"
+                    color="primary"
+                    @click="startStudySession"
+                    :disabled="!deck.flashcards || deck.flashcards.length === 0"
+                    prepend-icon="mdi-book-open-variant"
+                  >
+                    Study
+                  </v-btn>
+
+                  <v-btn
+                    class="modern-btn"
+                    color="info"
+                    to="/study-history"
+                    prepend-icon="mdi-history"
+                  >
+                    Study History
+                  </v-btn>
+
+                  <v-btn
+                    v-if="!isSystemDeck"
+                    class="modern-btn"
+                    color="secondary"
+                    @click="showAddCardDialog = true"
+                    prepend-icon="mdi-plus"
+                  >
+                    Add Card
+                  </v-btn>
+
+                  <v-btn
+                    v-if="!isSystemDeck"
+                    class="modern-btn"
+                    color="error"
+                    variant="outlined"
+                    @click="confirmDeleteDeck"
+                    prepend-icon="mdi-delete"
+                  >
+                    Delete Deck
+                  </v-btn>
+                </div>
+
+                <!-- Error Alert -->
                 <v-alert
                   v-if="flashcardsStore.error"
                   type="error"
-                  dismissible
+                  variant="tonal"
+                  closable
                   @click:close="flashcardsStore.clearError()"
+                  class="mb-6"
                 >
                   {{ flashcardsStore.error }}
                 </v-alert>
-
-                <div v-if="!deck.flashcards || deck.flashcards.length === 0" class="text-center pa-4">
-                  <p>No flashcards in this deck yet.</p>
-                  <v-btn
-                    v-if="!isSystemDeck"
-                    color="primary"
-                    @click="showAddCardDialog = true"
-                    class="mt-2"
-                  >
-                    Add Your First Flashcard
-                  </v-btn>
-                  <p v-else class="mt-2 text-caption">
-                    This is a native deck. You cannot add flashcards to it.
-                  </p>
-                </div>
-
-                <v-expansion-panels v-else>
-                  <v-expansion-panel
-                    v-for="(card, index) in deck.flashcards"
-                    :key="card.id"
-                    class="mb-3"
-                  >
-                    <v-expansion-panel-header class="question-header">
-                      <div class="d-flex align-center">
-                        <v-chip class="mr-3" color="primary" small>{{ index + 1 }}</v-chip>
-                        <div class="question-text">{{ card.question }}</div>
-                      </div>
-                    </v-expansion-panel-header>
-
-                    <v-expansion-panel-content class="answer-content">
-                      <div class="pa-4">
-                        <v-card class="answer-card mb-3" color="amber lighten-5" outlined>
-                          <v-card-text class="text-body-1">{{ card.answer }}</v-card-text>
-                        </v-card>
-
-                        <div class="d-flex justify-end mt-2" v-if="!isSystemDeck">
-                          <v-btn
-                            color="primary"
-                            small
-                            @click.stop="editCard(card)"
-                            class="mr-2"
-                          >
-                            <v-icon left>mdi-pencil</v-icon>
-                            Edit
-                          </v-btn>
-
-                          <v-btn
-                            color="error"
-                            small
-                            @click.stop="deleteCard(card)"
-                          >
-                            <v-icon left>mdi-delete</v-icon>
-                            Delete
-                          </v-btn>
-                        </div>
-                      </div>
-                    </v-expansion-panel-content>
-                  </v-expansion-panel>
-                </v-expansion-panels>
               </v-card-text>
             </v-card>
+
+            <!-- Empty State -->
+            <div v-if="!deck.flashcards || deck.flashcards.length === 0" class="text-center py-12 animate-fade-in">
+              <v-avatar size="120" class="gradient-secondary mb-6 animate-pulse">
+                <v-icon size="60" color="white">mdi-card-plus</v-icon>
+              </v-avatar>
+              <h3 class="text-h4 font-weight-bold mb-4">No Flashcards Yet</h3>
+              <p class="text-h6 text-medium-emphasis mb-6">
+                {{ isSystemDeck ? 'This is a native deck with no flashcards.' : 'Start building your deck by adding your first flashcard!' }}
+              </p>
+              <v-btn
+                v-if="!isSystemDeck"
+                class="modern-btn"
+                color="primary"
+                size="large"
+                @click="showAddCardDialog = true"
+                prepend-icon="mdi-plus"
+              >
+                Add Your First Flashcard
+              </v-btn>
+            </div>
+
+            <!-- Flashcards List -->
+            <div v-else class="animate-slide-in-up animate-delay-200">
+              <h2 class="text-h4 font-weight-bold mb-6 text-center">
+                Flashcards ({{ deck.flashcards.length }})
+              </h2>
+
+              <div class="flashcards-grid">
+                <v-card
+                  v-for="(card, index) in deck.flashcards"
+                  :key="card.id"
+                  class="modern-card flashcard-item mb-4 animate-scale-in"
+                  :class="`animate-delay-${100 + (index % 5) * 100}`"
+                >
+                  <!-- Question Side -->
+                  <div class="gradient-primary pa-4">
+                    <div class="d-flex align-center justify-space-between">
+                      <v-chip class="gradient-secondary text-white" size="small">
+                        Card {{ index + 1 }}
+                      </v-chip>
+                      <v-icon color="white">mdi-help-circle</v-icon>
+                    </div>
+                  </div>
+
+                  <v-card-text class="pa-6">
+                    <h3 class="text-h6 font-weight-bold mb-4 text-white">Question</h3>
+                    <p class="text-body-1 mb-6">{{ card.question }}</p>
+
+                    <!-- Answer Section -->
+                    <div class="answer-section">
+                      <div class="d-flex align-center mb-3">
+                        <v-avatar size="32" class="gradient-info mr-3">
+                          <v-icon size="16" color="white">mdi-lightbulb</v-icon>
+                        </v-avatar>
+                        <h4 class="text-h6 font-weight-bold text-info">Answer</h4>
+                      </div>
+                      <div class="answer-card pa-4">
+                        <p class="text-body-1 mb-0">{{ card.answer }}</p>
+                      </div>
+                    </div>
+
+                    <!-- Card Actions -->
+                    <div v-if="!isSystemDeck" class="d-flex justify-end gap-2 mt-4">
+                      <v-btn
+                        class="modern-btn"
+                        color="primary"
+                        size="small"
+                        @click.stop="editCard(card)"
+                        prepend-icon="mdi-pencil"
+                      >
+                        Edit
+                      </v-btn>
+
+                      <v-btn
+                        class="modern-btn"
+                        color="error"
+                        size="small"
+                        variant="outlined"
+                        @click.stop="deleteCard(card)"
+                        icon="mdi-delete"
+                      ></v-btn>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </div>
+            </div>
           </v-col>
         </v-row>
       </template>
 
-      <v-row v-else>
-        <v-col cols="12">
-          <v-alert type="error">
-            Deck not found
-          </v-alert>
-          <v-btn
-            color="primary"
-            to="/decks"
-            class="mt-4"
-          >
-            Back to Decks
-          </v-btn>
-        </v-col>
-      </v-row>
+      <!-- Error State -->
+      <div v-else class="text-center py-12 animate-fade-in">
+        <v-avatar size="120" class="gradient-error mb-6">
+          <v-icon size="60" color="white">mdi-alert-circle</v-icon>
+        </v-avatar>
+        <h3 class="text-h4 font-weight-bold mb-4">Deck Not Found</h3>
+        <p class="text-h6 text-medium-emphasis mb-6">
+          The deck you're looking for doesn't exist or has been removed.
+        </p>
+        <v-btn
+          class="modern-btn"
+          color="primary"
+          size="large"
+          to="/decks"
+          prepend-icon="mdi-arrow-left"
+        >
+          Back to Decks
+        </v-btn>
+      </div>
     </v-container>
 
     <!-- Add/Edit Card Dialog -->
@@ -578,19 +638,117 @@ export default {
 </script>
 
 <style scoped>
-.question-header {
-  background-color: #e3f2fd !important;
+.deck-detail-view {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
-.question-text {
-  font-weight: 500;
+.v-theme--dark .deck-detail-view {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
 }
 
-.answer-content {
-  background-color: #fff8e1 !important;
+.flashcards-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.flashcard-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.flashcard-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.answer-section {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(37, 99, 235, 0.05) 100%);
+  border-radius: var(--border-radius-lg);
+  padding: 16px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .answer-card {
-  border-left: 4px solid #ffc107;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: var(--border-radius-lg);
+  border-left: 4px solid #3B82F6;
+}
+
+.v-theme--dark .answer-card {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-left-color: #60A5FA;
+}
+
+.v-theme--dark .answer-section {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.6s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.5s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
+
+.animate-delay-100 { animation-delay: 0.1s; }
+.animate-delay-200 { animation-delay: 0.2s; }
+.animate-delay-300 { animation-delay: 0.3s; }
+.animate-delay-400 { animation-delay: 0.4s; }
+.animate-delay-500 { animation-delay: 0.5s; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .flashcards-grid {
+    gap: 16px;
+  }
+
+  .flashcard-item {
+    margin-bottom: 16px;
+  }
 }
 </style>

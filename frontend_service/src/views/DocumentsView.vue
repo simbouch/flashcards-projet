@@ -1,86 +1,131 @@
 <template>
-  <div class="documents">
-    <v-container>
-      <v-row>
-        <v-col cols="12">
-          <v-card>
-            <v-card-title class="text-h5">
-              My Documents
-              <v-spacer></v-spacer>
+  <div class="documents-view">
+    <v-container class="py-8">
+      <!-- Page Header -->
+      <div class="text-center mb-8 animate-fade-in">
+        <v-avatar size="80" class="gradient-info mb-4 animate-pulse">
+          <v-icon size="40" color="white">mdi-file-document-multiple</v-icon>
+        </v-avatar>
+        <h1 class="text-h3 font-weight-bold mb-2">My Documents</h1>
+        <p class="text-h6 text-medium-emphasis">Upload and manage your documents for AI-powered flashcard generation</p>
+      </div>
+
+      <v-row justify="center">
+        <v-col cols="12" md="10" lg="8">
+          <!-- Upload Section -->
+          <v-card class="modern-card mb-6 animate-slide-in-up">
+            <v-card-text class="pa-6 text-center">
+              <v-avatar size="64" class="gradient-primary mb-4">
+                <v-icon size="32" color="white">mdi-upload</v-icon>
+              </v-avatar>
+              <h3 class="text-h5 font-weight-bold mb-3">Upload New Document</h3>
+              <p class="text-body-2 text-medium-emphasis mb-4">
+                Upload PDFs or images to automatically generate flashcards using AI
+              </p>
               <v-btn
+                class="modern-btn"
                 color="primary"
+                size="large"
                 @click="showUploadDialog = true"
+                prepend-icon="mdi-upload"
               >
-                <v-icon left>mdi-upload</v-icon>
                 Upload Document
               </v-btn>
+            </v-card-text>
+          </v-card>
+
+          <!-- Error Alert -->
+          <v-alert
+            v-if="documentsStore.error"
+            type="error"
+            variant="tonal"
+            class="modern-card mb-6 animate-slide-in-up animate-delay-200"
+            closable
+            @click:close="documentsStore.clearError()"
+          >
+            {{ documentsStore.error }}
+          </v-alert>
+
+          <!-- Documents Table -->
+          <v-card class="modern-card animate-slide-in-up animate-delay-400">
+            <v-card-title class="pa-6 pb-4">
+              <div class="d-flex align-center">
+                <v-avatar size="48" class="gradient-secondary mr-4">
+                  <v-icon size="24" color="white">mdi-file-document</v-icon>
+                </v-avatar>
+                <div>
+                  <h3 class="text-h5 font-weight-bold">Document Library</h3>
+                  <p class="text-caption text-medium-emphasis mb-0">{{ documentsStore.documents.length }} documents</p>
+                </div>
+              </div>
             </v-card-title>
 
-            <v-card-text>
-              <v-alert
-                v-if="documentsStore.error"
-                type="error"
-                dismissible
-                @click:close="documentsStore.clearError()"
-              >
-                {{ documentsStore.error }}
-              </v-alert>
-
+            <v-card-text class="pa-0">
               <v-data-table
                 :headers="headers"
                 :items="documentsStore.documents"
                 :loading="documentsStore.loading"
                 :items-per-page="10"
-                class="elevation-1"
+                class="modern-table"
                 :no-data-text="documentsStore.loading ? 'Loading documents...' : 'No documents found'"
               >
                 <template #[`item.status`]="{ item }">
                   <v-chip
                     :color="getStatusColor(item.status)"
-                    small
+                    size="small"
+                    variant="flat"
                   >
+                    <v-icon start size="16">{{ getStatusIcon(item.status) }}</v-icon>
                     {{ formatStatus(item.status) }}
                   </v-chip>
                 </template>
 
                 <template #[`item.created_at`]="{ item }">
-                  {{ formatDate(item.created_at) }}
+                  <div class="d-flex align-center">
+                    <v-icon size="16" class="text-medium-emphasis mr-2">mdi-calendar</v-icon>
+                    {{ formatDate(item.created_at) }}
+                  </div>
                 </template>
 
                 <template #[`item.actions`]="{ item }">
-                  <v-btn
-                    color="primary"
-                    small
-                    @click="viewDocument(item)"
-                    :disabled="!isProcessingComplete(item)"
-                    class="mr-2"
-                  >
-                    <v-icon left>mdi-eye</v-icon>
-                    View Document
-                  </v-btn>
+                  <div class="d-flex gap-2">
+                    <v-btn
+                      class="modern-btn"
+                      color="primary"
+                      size="small"
+                      @click="viewDocument(item)"
+                      :disabled="!isProcessingComplete(item)"
+                      prepend-icon="mdi-eye"
+                    >
+                      View
+                    </v-btn>
 
-                  <v-btn
-                    color="error"
-                    small
-                    @click="deleteDocument(item)"
-                    class="ml-2"
-                  >
-                    <v-icon left>mdi-delete</v-icon>
-                    Delete
-                  </v-btn>
+                    <v-btn
+                      class="modern-btn"
+                      color="error"
+                      size="small"
+                      variant="outlined"
+                      @click="deleteDocument(item)"
+                      icon="mdi-delete"
+                    ></v-btn>
+                  </div>
                 </template>
               </v-data-table>
             </v-card-text>
-            <v-card-actions>
-              <v-btn
-                color="secondary"
-                @click="goToMain"
-              >
-                <v-icon left>mdi-arrow-left</v-icon>
-                Back to Main
-              </v-btn>
-            </v-card-actions>
           </v-card>
+
+          <!-- Back to Main Button -->
+          <div class="text-center mt-8 animate-fade-in animate-delay-600">
+            <v-btn
+              class="modern-btn"
+              color="secondary"
+              size="large"
+              @click="goToMain"
+              prepend-icon="mdi-arrow-left"
+            >
+              Back to Main
+            </v-btn>
+          </div>
         </v-col>
       </v-row>
     </v-container>
@@ -89,48 +134,69 @@
     <v-dialog
       v-model="showUploadDialog"
       max-width="500px"
+      class="glass-effect"
     >
-      <v-card>
-        <v-card-title class="text-h5">
-          Upload Document
+      <v-card class="modern-card">
+        <v-card-title class="pa-6 pb-4">
+          <div class="d-flex align-center">
+            <v-avatar size="48" class="gradient-primary mr-4">
+              <v-icon size="24" color="white">mdi-upload</v-icon>
+            </v-avatar>
+            <div>
+              <h3 class="text-h5 font-weight-bold">Upload Document</h3>
+              <p class="text-caption text-medium-emphasis mb-0">PDF or image files supported</p>
+            </div>
+          </div>
         </v-card-title>
 
-        <v-card-text>
+        <v-card-text class="pa-6 pt-0">
           <v-file-input
             v-model="fileToUpload"
             label="Select Document"
             accept="image/jpeg,image/png,application/pdf"
-            prepend-icon="mdi-file-document"
+            prepend-inner-icon="mdi-file-document"
+            variant="outlined"
             show-size
+            class="mb-4"
             :rules="[v => !!v || 'Please select a file to upload']"
           ></v-file-input>
 
           <v-alert
             v-if="uploadError"
             type="error"
-            dismissible
+            variant="tonal"
+            closable
             @click:close="uploadError = null"
+            class="mb-4"
           >
             {{ uploadError }}
           </v-alert>
+
+          <div class="text-caption text-medium-emphasis">
+            <v-icon size="16" class="mr-1">mdi-information</v-icon>
+            Supported formats: PDF, JPEG, PNG (max 10MB)
+          </div>
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="pa-6 pt-0">
           <v-spacer></v-spacer>
           <v-btn
-            color="grey darken-1"
-            text
+            class="modern-btn"
+            color="grey"
+            variant="outlined"
             @click="showUploadDialog = false"
           >
             Cancel
           </v-btn>
           <v-btn
+            class="modern-btn ml-2"
             color="primary"
             @click="uploadDocument"
             :loading="uploading"
             :disabled="!fileToUpload || uploading"
+            prepend-icon="mdi-upload"
           >
-            Upload
+            Upload Document
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -348,6 +414,21 @@ export default {
       return statusMap[status] || 'grey'
     },
 
+    getStatusIcon(status) {
+      if (!status) return 'mdi-help-circle'
+
+      const iconMap = {
+        'uploaded': 'mdi-upload',
+        'ocr_processing': 'mdi-eye-scan',
+        'ocr_complete': 'mdi-text-recognition',
+        'flashcard_generating': 'mdi-robot',
+        'flashcard_complete': 'mdi-check-circle',
+        'error': 'mdi-alert-circle'
+      }
+
+      return iconMap[status] || 'mdi-help-circle'
+    },
+
     isProcessingComplete(document) {
       return document.status === 'flashcard_complete' || document.status === 'error'
     },
@@ -463,13 +544,87 @@ export default {
 </script>
 
 <style scoped>
+.documents-view {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.v-theme--dark .documents-view {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
 .extracted-text {
   white-space: pre-wrap;
-  font-family: monospace;
-  background-color: #f5f5f5;
-  padding: 10px;
-  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  padding: 16px;
+  border-radius: var(--border-radius-lg);
   max-height: 400px;
   overflow-y: auto;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.v-theme--dark .extracted-text {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-color: rgba(71, 85, 105, 0.3);
+}
+
+.modern-table {
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+}
+
+.modern-table :deep(.v-data-table__wrapper) {
+  border-radius: var(--border-radius-lg);
+}
+
+.modern-table :deep(.v-data-table-header) {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.v-theme--dark .modern-table :deep(.v-data-table-header) {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+}
+
+.modern-table :deep(.v-data-table__tr:hover) {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.6s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
+
+.animate-delay-200 { animation-delay: 0.2s; }
+.animate-delay-400 { animation-delay: 0.4s; }
+.animate-delay-600 { animation-delay: 0.6s; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 </style>
