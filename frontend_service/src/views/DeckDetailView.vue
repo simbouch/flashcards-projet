@@ -211,8 +211,10 @@
                         size="small"
                         variant="outlined"
                         @click.stop="deleteCard(card)"
-                        icon="mdi-delete"
-                      ></v-btn>
+                        prepend-icon="mdi-delete"
+                      >
+                        Delete
+                      </v-btn>
                     </div>
                   </v-card-text>
                 </v-card>
