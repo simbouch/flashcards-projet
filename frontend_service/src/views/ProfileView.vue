@@ -1,232 +1,294 @@
 <template>
-  <div class="profile">
-    <v-container>
+  <div class="profile-view">
+    <v-container class="py-8">
+      <!-- Page Header -->
+      <div class="text-center mb-8 animate-fade-in">
+        <v-avatar size="80" class="gradient-primary mb-4 animate-pulse">
+          <v-icon size="40" color="white">mdi-account-circle</v-icon>
+        </v-avatar>
+        <h1 class="text-h3 font-weight-bold mb-2">My Profile</h1>
+        <p class="text-h6 text-medium-emphasis">Manage your account settings and view your progress</p>
+      </div>
+
       <v-row justify="center">
-        <v-col cols="12" md="8">
-          <v-card>
-            <v-card-title class="text-h5">
-              My Profile
+        <v-col cols="12" md="10" lg="8">
+          <!-- Error and Success Alerts -->
+          <v-alert
+            v-if="authStore.error"
+            type="error"
+            variant="tonal"
+            class="modern-card mb-6 animate-slide-in-up"
+            closable
+            @click:close="authStore.clearError()"
+          >
+            {{ authStore.error }}
+          </v-alert>
+
+          <v-alert
+            v-if="successMessage"
+            type="success"
+            variant="tonal"
+            class="modern-card mb-6 animate-slide-in-up"
+            closable
+            @click:close="successMessage = ''"
+          >
+            {{ successMessage }}
+          </v-alert>
+
+          <!-- Profile Information Card -->
+          <v-card class="modern-card mb-6 animate-slide-in-up animate-delay-200">
+            <v-card-title class="pa-6 pb-4">
+              <div class="d-flex align-center">
+                <v-avatar size="48" class="gradient-secondary mr-4">
+                  <v-icon size="24" color="white">mdi-account</v-icon>
+                </v-avatar>
+                <div>
+                  <h3 class="text-h5 font-weight-bold">Profile Information</h3>
+                  <p class="text-caption text-medium-emphasis mb-0">Your account details</p>
+                </div>
+              </div>
             </v-card-title>
 
-            <v-card-text>
-              <v-alert
-                v-if="authStore.error"
-                type="error"
-                dismissible
-                @click:close="authStore.clearError()"
-              >
-                {{ authStore.error }}
-              </v-alert>
-
-              <v-alert
-                v-if="successMessage"
-                type="success"
-                dismissible
-                @click:close="successMessage = ''"
-              >
-                {{ successMessage }}
-              </v-alert>
-
+            <v-card-text class="pa-6 pt-0">
               <v-form @submit.prevent="updateProfile" ref="form">
                 <v-text-field
                   v-model="profileForm.email"
-                  label="Email"
+                  label="Email Address"
                   type="email"
-                  required
+                  variant="outlined"
+                  class="mb-4"
+                  prepend-inner-icon="mdi-email"
+                  :disabled="!editMode"
                   :rules="[
                     v => !!v || 'Email is required',
                     v => /.+@.+\..+/.test(v) || 'Email must be valid'
                   ]"
-                  prepend-icon="mdi-email"
-                  :disabled="!editMode"
                 ></v-text-field>
 
                 <v-text-field
                   v-model="profileForm.username"
                   label="Username"
-                  required
-                  prepend-icon="mdi-account"
+                  variant="outlined"
+                  class="mb-4"
+                  prepend-inner-icon="mdi-account"
                   disabled
+                  hint="Username cannot be changed"
+                  persistent-hint
                 ></v-text-field>
 
                 <v-text-field
                   v-model="profileForm.full_name"
                   label="Full Name"
-                  prepend-icon="mdi-account-details"
+                  variant="outlined"
+                  class="mb-4"
+                  prepend-inner-icon="mdi-account-details"
                   :disabled="!editMode"
                 ></v-text-field>
 
-                <v-divider class="my-4"></v-divider>
+                <!-- Password Change Section -->
+                <div v-if="editMode" class="password-section">
+                  <v-divider class="my-6"></v-divider>
+                  <h4 class="text-h6 font-weight-bold mb-4">Change Password</h4>
 
-                <v-expansion-panels v-if="editMode">
-                  <v-expansion-panel>
-                    <v-expansion-panel-header>
-                      Change Password
-                    </v-expansion-panel-header>
-                    <v-expansion-panel-content>
-                      <v-text-field
-                        v-model="passwordForm.current_password"
-                        label="Current Password"
-                        type="password"
-                        prepend-icon="mdi-lock"
-                        :rules="[
-                          v => !changePassword || !!v || 'Current password is required to change password'
-                        ]"
-                      ></v-text-field>
+                  <v-text-field
+                    v-model="passwordForm.current_password"
+                    label="Current Password"
+                    type="password"
+                    variant="outlined"
+                    class="mb-4"
+                    prepend-inner-icon="mdi-lock"
+                    :rules="[
+                      v => !changePassword || !!v || 'Current password is required to change password'
+                    ]"
+                  ></v-text-field>
 
-                      <v-text-field
-                        v-model="passwordForm.new_password"
-                        label="New Password"
-                        type="password"
-                        prepend-icon="mdi-lock-plus"
-                        :rules="[
-                          v => !changePassword || !!v || 'New password is required',
-                          v => !changePassword || v.length >= 8 || 'Password must be at least 8 characters',
-                          v => !changePassword || /[A-Z]/.test(v) || 'Password must contain at least one uppercase letter',
-                          v => !changePassword || /[a-z]/.test(v) || 'Password must contain at least one lowercase letter',
-                          v => !changePassword || /[0-9]/.test(v) || 'Password must contain at least one number'
-                        ]"
-                      ></v-text-field>
+                  <v-text-field
+                    v-model="passwordForm.new_password"
+                    label="New Password"
+                    type="password"
+                    variant="outlined"
+                    class="mb-4"
+                    prepend-inner-icon="mdi-lock-plus"
+                    :rules="[
+                      v => !changePassword || !!v || 'New password is required',
+                      v => !changePassword || v.length >= 8 || 'Password must be at least 8 characters',
+                      v => !changePassword || /[A-Z]/.test(v) || 'Password must contain at least one uppercase letter',
+                      v => !changePassword || /[a-z]/.test(v) || 'Password must contain at least one lowercase letter',
+                      v => !changePassword || /[0-9]/.test(v) || 'Password must contain at least one number'
+                    ]"
+                  ></v-text-field>
 
-                      <v-text-field
-                        v-model="passwordForm.confirm_password"
-                        label="Confirm New Password"
-                        type="password"
-                        prepend-icon="mdi-lock-check"
-                        :rules="[
-                          v => !changePassword || !!v || 'Please confirm your password',
-                          v => !changePassword || v === passwordForm.new_password || 'Passwords do not match'
-                        ]"
-                      ></v-text-field>
+                  <v-text-field
+                    v-model="passwordForm.confirm_password"
+                    label="Confirm New Password"
+                    type="password"
+                    variant="outlined"
+                    class="mb-4"
+                    prepend-inner-icon="mdi-lock-check"
+                    :rules="[
+                      v => !changePassword || !!v || 'Please confirm your password',
+                      v => !changePassword || v === passwordForm.new_password || 'Passwords do not match'
+                    ]"
+                  ></v-text-field>
 
-                      <v-checkbox
-                        v-model="changePassword"
-                        label="I want to change my password"
-                        color="primary"
-                      ></v-checkbox>
-                    </v-expansion-panel-content>
-                  </v-expansion-panel>
-                </v-expansion-panels>
+                  <v-switch
+                    v-model="changePassword"
+                    label="I want to change my password"
+                    color="primary"
+                    class="mb-4"
+                  ></v-switch>
+                </div>
               </v-form>
             </v-card-text>
 
-            <v-card-actions>
+            <v-card-actions class="pa-6 pt-0">
               <v-spacer></v-spacer>
 
               <template v-if="editMode">
                 <v-btn
-                  color="grey darken-1"
-                  text
+                  class="modern-btn"
+                  color="grey"
+                  variant="outlined"
                   @click="cancelEdit"
                 >
                   Cancel
                 </v-btn>
 
                 <v-btn
+                  class="modern-btn ml-2"
                   color="primary"
                   @click="updateProfile"
                   :loading="authStore.loading"
+                  prepend-icon="mdi-content-save"
                 >
-                  Save
+                  Save Changes
                 </v-btn>
               </template>
 
               <v-btn
                 v-else
+                class="modern-btn"
                 color="primary"
                 @click="startEdit"
+                prepend-icon="mdi-pencil"
               >
                 Edit Profile
               </v-btn>
             </v-card-actions>
           </v-card>
 
-          <v-card class="mt-6">
-            <v-card-title class="text-h5">
-              Account Statistics
+          <!-- Account Statistics Card -->
+          <v-card class="modern-card mb-6 animate-slide-in-up animate-delay-400">
+            <v-card-title class="pa-6 pb-4">
+              <div class="d-flex align-center">
+                <v-avatar size="48" class="gradient-info mr-4">
+                  <v-icon size="24" color="white">mdi-chart-line</v-icon>
+                </v-avatar>
+                <div>
+                  <h3 class="text-h5 font-weight-bold">Account Statistics</h3>
+                  <p class="text-caption text-medium-emphasis mb-0">Your learning progress</p>
+                </div>
+              </div>
             </v-card-title>
 
-            <v-card-text>
+            <v-card-text class="pa-6 pt-0">
               <v-row>
-                <v-col cols="12" sm="4">
-                  <v-card outlined class="text-center pa-4">
-                    <div class="text-h4 primary--text">{{ stats.documents }}</div>
-                    <div class="text-subtitle-1">Documents</div>
-                  </v-card>
+                <v-col cols="6" sm="3">
+                  <div class="stat-card text-center">
+                    <v-avatar size="64" class="gradient-primary mb-3">
+                      <v-icon size="32" color="white">mdi-file-document</v-icon>
+                    </v-avatar>
+                    <p class="text-h4 font-weight-bold mb-1">{{ stats.documents }}</p>
+                    <p class="text-caption text-medium-emphasis">Documents</p>
+                  </div>
                 </v-col>
 
-                <v-col cols="12" sm="4">
-                  <v-card outlined class="text-center pa-4">
-                    <div class="text-h4 primary--text">{{ stats.decks }}</div>
-                    <div class="text-subtitle-1">Decks</div>
-                  </v-card>
+                <v-col cols="6" sm="3">
+                  <div class="stat-card text-center">
+                    <v-avatar size="64" class="gradient-secondary mb-3">
+                      <v-icon size="32" color="white">mdi-cards-outline</v-icon>
+                    </v-avatar>
+                    <p class="text-h4 font-weight-bold mb-1">{{ stats.decks }}</p>
+                    <p class="text-caption text-medium-emphasis">Decks</p>
+                  </div>
                 </v-col>
 
-                <v-col cols="12" sm="4">
-                  <v-card outlined class="text-center pa-4">
-                    <div class="text-h4 primary--text">{{ stats.flashcards }}</div>
-                    <div class="text-subtitle-1">Flashcards</div>
-                  </v-card>
+                <v-col cols="6" sm="3">
+                  <div class="stat-card text-center">
+                    <v-avatar size="64" class="gradient-success mb-3">
+                      <v-icon size="32" color="white">mdi-card-multiple</v-icon>
+                    </v-avatar>
+                    <p class="text-h4 font-weight-bold mb-1">{{ stats.flashcards }}</p>
+                    <p class="text-caption text-medium-emphasis">Flashcards</p>
+                  </div>
+                </v-col>
+
+                <v-col cols="6" sm="3">
+                  <div class="stat-card text-center">
+                    <v-avatar size="64" class="gradient-info mb-3">
+                      <v-icon size="32" color="white">mdi-book-open-variant</v-icon>
+                    </v-avatar>
+                    <p class="text-h4 font-weight-bold mb-1">{{ stats.studySessions }}</p>
+                    <p class="text-caption text-medium-emphasis">Study Sessions</p>
+                  </div>
                 </v-col>
               </v-row>
 
-              <v-row class="mt-4">
-                <v-col cols="12" sm="6">
-                  <v-card outlined class="text-center pa-4">
-                    <div class="text-h4 primary--text">{{ stats.studySessions }}</div>
-                    <div class="text-subtitle-1">Study Sessions</div>
-                  </v-card>
-                </v-col>
-
-                <v-col cols="12" sm="6">
-                  <v-card outlined class="text-center pa-4">
-                    <div class="text-h4 primary--text">{{ stats.cardsStudied }}</div>
-                    <div class="text-subtitle-1">Cards Studied</div>
-                  </v-card>
-                </v-col>
-              </v-row>
-
-              <div class="text-center mt-4">
+              <div class="text-center mt-6">
                 <v-btn
+                  class="modern-btn"
                   color="primary"
+                  size="large"
                   to="/study-history"
+                  prepend-icon="mdi-history"
                 >
-                  <v-icon left>mdi-history</v-icon>
                   View Study History
                 </v-btn>
               </div>
             </v-card-text>
           </v-card>
 
-          <v-card class="mt-6">
-            <v-card-title class="text-h5">
-              Privacy & Data
+          <!-- Privacy & Data Card -->
+          <v-card class="modern-card animate-slide-in-up animate-delay-600">
+            <v-card-title class="pa-6 pb-4">
+              <div class="d-flex align-center">
+                <v-avatar size="48" class="gradient-secondary mr-4">
+                  <v-icon size="24" color="white">mdi-shield-account</v-icon>
+                </v-avatar>
+                <div>
+                  <h3 class="text-h5 font-weight-bold">Privacy & Data</h3>
+                  <p class="text-caption text-medium-emphasis mb-0">Manage your data and privacy settings</p>
+                </div>
+              </div>
             </v-card-title>
 
-            <v-card-text>
-              <p>
+            <v-card-text class="pa-6 pt-0">
+              <p class="text-body-2 mb-6">
                 Your data is stored securely and is only used to provide the flashcard service.
                 We do not share your personal information with third parties.
               </p>
 
-              <v-divider class="my-4"></v-divider>
+              <div class="d-flex flex-wrap gap-3">
+                <v-btn
+                  class="modern-btn"
+                  color="primary"
+                  variant="outlined"
+                  @click="showExportDataDialog = true"
+                  prepend-icon="mdi-download"
+                >
+                  Export My Data
+                </v-btn>
 
-              <v-btn
-                color="error"
-                outlined
-                @click="showDeleteAccountDialog = true"
-              >
-                Delete My Account
-              </v-btn>
-
-              <v-btn
-                color="primary"
-                outlined
-                class="ml-4"
-                @click="showExportDataDialog = true"
-              >
-                Export My Data
-              </v-btn>
+                <v-btn
+                  class="modern-btn"
+                  color="error"
+                  variant="outlined"
+                  @click="showDeleteAccountDialog = true"
+                  prepend-icon="mdi-delete"
+                >
+                  Delete My Account
+                </v-btn>
+              </div>
             </v-card-text>
           </v-card>
         </v-col>
@@ -539,3 +601,82 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.profile-view {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.v-theme--dark .profile-view {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+.stat-card {
+  padding: 16px;
+  border-radius: var(--border-radius-lg);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(37, 99, 235, 0.05) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.1);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.v-theme--dark .stat-card {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+  border-color: rgba(96, 165, 250, 0.2);
+}
+
+.password-section {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(37, 99, 235, 0.05) 100%);
+  border-radius: var(--border-radius-lg);
+  padding: 20px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.v-theme--dark .password-section {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.6s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
+
+.animate-delay-200 { animation-delay: 0.2s; }
+.animate-delay-400 { animation-delay: 0.4s; }
+.animate-delay-600 { animation-delay: 0.6s; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+</style>

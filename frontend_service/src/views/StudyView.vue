@@ -790,8 +790,17 @@ export default {
   transition: all var(--transition-normal);
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
   backdrop-filter: blur(20px);
+}
+
+.question-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+  border: 2px solid rgba(59, 130, 246, 0.2);
+}
+
+.answer-card {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+  border: 2px solid rgba(16, 185, 129, 0.2);
 }
 
 .flashcard-container:hover {
@@ -804,16 +813,17 @@ export default {
   top: 0;
   left: 0;
   right: 0;
-  height: 6px;
+  height: 8px;
   z-index: 1;
+  border-radius: var(--border-radius-2xl) var(--border-radius-2xl) 0 0;
 }
 
 .question-gradient {
-  background: var(--gradient-primary);
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
 }
 
 .answer-gradient {
-  background: var(--gradient-info);
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
 }
 
 .flashcard-content {
@@ -943,8 +953,14 @@ export default {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
 }
 
-.v-theme--dark .flashcard-container {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+.v-theme--dark .question-card {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.v-theme--dark .answer-card {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
+  border-color: rgba(52, 211, 153, 0.3);
 }
 
 .v-theme--dark .stat-item {

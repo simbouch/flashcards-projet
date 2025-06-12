@@ -247,47 +247,63 @@
     <v-dialog
       v-model="showAddCardDialog"
       max-width="500px"
+      class="glass-effect"
     >
-      <v-card>
-        <v-card-title class="text-h5">
-          {{ editMode ? 'Edit Flashcard' : 'Add New Flashcard' }}
+      <v-card class="modern-card">
+        <v-card-title class="pa-6 pb-4">
+          <div class="d-flex align-center">
+            <v-avatar size="48" class="gradient-primary mr-4">
+              <v-icon size="24" color="white">{{ editMode ? 'mdi-pencil' : 'mdi-plus' }}</v-icon>
+            </v-avatar>
+            <div>
+              <h3 class="text-h5 font-weight-bold">{{ editMode ? 'Edit Flashcard' : 'Add New Flashcard' }}</h3>
+              <p class="text-caption text-medium-emphasis mb-0">{{ editMode ? 'Update your flashcard content' : 'Create a new flashcard for this deck' }}</p>
+            </div>
+          </div>
         </v-card-title>
 
-        <v-card-text>
+        <v-card-text class="pa-6 pt-0">
           <v-form ref="cardForm">
             <v-textarea
               v-model="cardForm.question"
               label="Question"
+              variant="outlined"
               rows="3"
-              required
+              class="mb-4"
+              prepend-inner-icon="mdi-help-circle"
               :rules="[v => !!v || 'Question is required']"
             ></v-textarea>
 
             <v-textarea
               v-model="cardForm.answer"
               label="Answer"
+              variant="outlined"
               rows="3"
-              required
+              class="mb-4"
+              prepend-inner-icon="mdi-lightbulb"
               :rules="[v => !!v || 'Answer is required']"
             ></v-textarea>
           </v-form>
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="pa-6 pt-0">
           <v-spacer></v-spacer>
           <v-btn
-            color="grey darken-1"
-            text
+            class="modern-btn"
+            color="grey"
+            variant="outlined"
             @click="showAddCardDialog = false"
           >
             Cancel
           </v-btn>
           <v-btn
+            class="modern-btn ml-2"
             color="primary"
             @click="saveCard"
             :loading="saving"
+            :prepend-icon="editMode ? 'mdi-content-save' : 'mdi-plus'"
           >
-            {{ editMode ? 'Update' : 'Add' }}
+            {{ editMode ? 'Update Card' : 'Add Card' }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -297,32 +313,46 @@
     <v-dialog
       v-model="showDeleteCardDialog"
       max-width="400px"
+      class="glass-effect"
     >
-      <v-card>
-        <v-card-title class="text-h5">
-          Confirm Delete
+      <v-card class="modern-card">
+        <v-card-title class="pa-6 pb-4">
+          <div class="d-flex align-center">
+            <v-avatar size="48" class="gradient-error mr-4">
+              <v-icon size="24" color="white">mdi-delete</v-icon>
+            </v-avatar>
+            <div>
+              <h3 class="text-h5 font-weight-bold">Confirm Delete</h3>
+              <p class="text-caption text-medium-emphasis mb-0">This action cannot be undone</p>
+            </div>
+          </div>
         </v-card-title>
 
-        <v-card-text>
-          Are you sure you want to delete this flashcard?
-          This action cannot be undone.
+        <v-card-text class="pa-6 pt-0">
+          <p class="text-body-2">
+            Are you sure you want to delete this flashcard?
+            This action cannot be undone.
+          </p>
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="pa-6 pt-0">
           <v-spacer></v-spacer>
           <v-btn
-            color="grey darken-1"
-            text
+            class="modern-btn"
+            color="grey"
+            variant="outlined"
             @click="showDeleteCardDialog = false"
           >
             Cancel
           </v-btn>
           <v-btn
+            class="modern-btn ml-2"
             color="error"
             @click="confirmDeleteCard"
             :loading="deleting"
+            prepend-icon="mdi-delete"
           >
-            Delete
+            Delete Card
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -331,32 +361,51 @@
     <!-- Delete Deck Confirmation Dialog -->
     <v-dialog
       v-model="showDeleteDeckDialog"
-      max-width="400px"
+      max-width="500px"
+      class="glass-effect"
     >
-      <v-card>
-        <v-card-title class="text-h5">
-          Confirm Delete Deck
+      <v-card class="modern-card">
+        <v-card-title class="pa-6 pb-4">
+          <div class="d-flex align-center">
+            <v-avatar size="48" class="gradient-error mr-4">
+              <v-icon size="24" color="white">mdi-delete</v-icon>
+            </v-avatar>
+            <div>
+              <h3 class="text-h5 font-weight-bold">Confirm Delete Deck</h3>
+              <p class="text-caption text-medium-emphasis mb-0">This action cannot be undone</p>
+            </div>
+          </div>
         </v-card-title>
 
-        <v-card-text>
-          Are you sure you want to delete the deck <strong>{{ deck?.title }}</strong>?
-          This will also delete all flashcards in this deck.
-          This action cannot be undone.
+        <v-card-text class="pa-6 pt-0">
+          <p class="text-body-2 mb-4">
+            Are you sure you want to delete the deck <strong>{{ deck?.title }}</strong>?
+          </p>
+          <v-alert
+            type="warning"
+            variant="tonal"
+            class="mb-4"
+          >
+            This will also delete all flashcards in this deck. This action cannot be undone.
+          </v-alert>
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="pa-6 pt-0">
           <v-spacer></v-spacer>
           <v-btn
-            color="grey darken-1"
-            text
+            class="modern-btn"
+            color="grey"
+            variant="outlined"
             @click="showDeleteDeckDialog = false"
           >
             Cancel
           </v-btn>
           <v-btn
+            class="modern-btn ml-2"
             color="error"
             @click="deleteDeck"
             :loading="deletingDeck"
+            prepend-icon="mdi-delete"
           >
             Delete Deck
           </v-btn>
