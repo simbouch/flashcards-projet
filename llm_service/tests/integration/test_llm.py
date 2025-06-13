@@ -1,13 +1,82 @@
 import requests
 import json
-import sys
+import os
+import pytest
 
+
+@pytest.mark.integration
 def test_llm_health():
     """Test if the LLM service is running."""
+    # Skip this test in CI environment where services aren't running
+    if os.getenv('TESTING') == 'true' or os.getenv('CI') == 'true':
+        pytest.skip("Skipping integration test in CI environment")
+
     url = "http://localhost:8001/health"
 
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)
+        assert response.status_code == 200, f"LLM service health check failed: {response.status_code}"
+
+        # Verify response content
+        health_data = response.json()
+        assert "status" in health_data, "Health response missing status field"
+        assert health_data["status"] == "healthy", f"Service not healthy: {health_data}"
+
+    except requests.exceptions.ConnectionError as e:
+        pytest.skip(f"LLM service not available: {e}")
+    except requests.exceptions.Timeout as e:
+        pytest.fail(f"LLM service timeout: {e}")
+    except Exception as e:
+        pytest.fail(f"Unexpected error connecting to LLM service: {e}")
+
+
+@pytest.mark.integration
+def test_generate_flashcards():
+    """Test flashcard generation from text using the LLM service."""
+    # Skip this test in CI environment where services aren't running
+    if os.getenv('TESTING') == 'true' or os.getenv('CI') == 'true':
+        pytest.skip("Skipping integration test in CI environment")
+
+    url = "http://localhost:8001/generate"
+    test_text = "The French Revolution was a period of radical political and social change in France."
+
+    data = {
+        "text": test_text,
+        "task": "flashcards"
+    }
+
+    try:
+        response = requests.post(url, json=data, timeout=30)
+        assert response.status_code == 200, f"Flashcard generation failed: {response.status_code}"
+
+        result = response.json()
+        assert "flashcards" in result, "Response missing flashcards field"
+
+        flashcards = result["flashcards"]
+        assert isinstance(flashcards, list), "Flashcards should be a list"
+        assert len(flashcards) > 0, "Should generate at least one flashcard"
+
+        # Verify flashcard structure
+        for flashcard in flashcards:
+            assert "question" in flashcard, "Flashcard missing question field"
+            assert "answer" in flashcard, "Flashcard missing answer field"
+            assert len(flashcard["question"].strip()) > 0, "Question should not be empty"
+            assert len(flashcard["answer"].strip()) > 0, "Answer should not be empty"
+
+    except requests.exceptions.ConnectionError as e:
+        pytest.skip(f"LLM service not available: {e}")
+    except requests.exceptions.Timeout as e:
+        pytest.fail(f"LLM service timeout: {e}")
+    except Exception as e:
+        pytest.fail(f"Unexpected error in flashcard generation: {e}")
+
+
+def check_llm_health():
+    """Helper function to check LLM service health - for manual testing."""
+    url = "http://localhost:8001/health"
+
+    try:
+        response = requests.get(url, timeout=5)
         if response.status_code == 200:
             return True
         else:
@@ -47,10 +116,10 @@ def generate_flashcards(text):
         return None
 
 def main():
-    """Main function."""
+    """Main function for manual testing."""
     # Check if the LLM service is running
     print("Checking LLM service health...")
-    if not test_llm_health():
+    if not check_llm_health():
         print("LLM service is not running or not responding correctly.")
         return
     print("LLM service is running.")

@@ -86,25 +86,25 @@ jobs:
       if: steps.changed-files.outputs.any_changed == 'true' && contains(steps.changed-files.outputs.all_changed_files, 'db_module/')
       run: |
         cd db_module
-        python -m pytest tests/ -v
+        python -m pytest tests/ -v -m "not integration"
 
     - name: Test ocr_service
       if: steps.changed-files.outputs.any_changed == 'true' && contains(steps.changed-files.outputs.all_changed_files, 'ocr_service/')
       run: |
         cd ocr_service
-        python -m pytest tests/ -v
+        python -m pytest tests/ -v -m "not integration"
 
     - name: Test llm_service
       if: steps.changed-files.outputs.any_changed == 'true' && contains(steps.changed-files.outputs.all_changed_files, 'llm_service/')
       run: |
         cd llm_service
-        python -m pytest tests/ -v
+        python -m pytest tests/ -v -m "not integration"
 
     - name: Test backend_service
       if: steps.changed-files.outputs.any_changed == 'true' && contains(steps.changed-files.outputs.all_changed_files, 'backend_service/')
       run: |
         cd backend_service
-        python -m pytest tests/ -v
+        python -m pytest tests/ -v -m "not integration"
 
   lint-and-test-frontend:
     runs-on: ubuntu-latest
