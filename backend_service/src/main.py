@@ -15,6 +15,7 @@ from .logger_config import logger
 from .api import api_router
 from db_module.database import init_db
 from .scripts.create_native_decks import create_native_decks
+from .scripts.bootstrap_admin import bootstrap_initial_admin
 from .middleware import limiter, rate_limit_handler, check_redis_health
 
 # Prometheus metrics
@@ -44,6 +45,12 @@ async def lifespan(app: FastAPI):
 
     # Initialize database
     init_db()
+
+    # Bootstrap initial admin (optional)
+    try:
+        bootstrap_initial_admin()
+    except Exception as e:
+        logger.error(f"Error bootstrapping initial admin: {type(e).__name__}: {e}")
 
     # Create upload directory if it doesn't exist
     upload_dir = Path(settings.UPLOAD_DIR)

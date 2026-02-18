@@ -69,6 +69,46 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     is_active: Optional[bool] = None
 
+
+class UserAdminUpdate(BaseModel):
+    """Admin-only user update schema.
+
+    Allows updating fields that regular users should not control (e.g. role).
+    """
+
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    is_active: Optional[bool] = None
+    role: Optional[str] = None
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: Optional[str]):
+        if v is None:
+            return v
+        if v not in {"user", "admin"}:
+            raise ValueError("Role must be 'user' or 'admin'")
+        return v
+
+
+class AdminResetPassword(BaseModel):
+    """Admin-only password reset payload."""
+
+    password: str
+
+    @field_validator('password')
+    @classmethod
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'[0-9]', v):
+            raise ValueError('Password must contain at least one number')
+        return v
+
 class UserInDB(UserBase):
     id: str
     role: str

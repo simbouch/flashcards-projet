@@ -51,6 +51,17 @@ class Settings(BaseSettings):
     # Security settings
     SECURITY_PASSWORD_SALT: str = os.getenv("SECURITY_PASSWORD_SALT", "salt")
 
+    # Initial admin bootstrap (optional)
+    # If provided, backend will create an initial admin user on startup (unless an admin already exists).
+    INITIAL_ADMIN_USERNAME: str = os.getenv("INITIAL_ADMIN_USERNAME", "")
+    INITIAL_ADMIN_PASSWORD: str = os.getenv("INITIAL_ADMIN_PASSWORD", "")
+    INITIAL_ADMIN_EMAIL: str = os.getenv("INITIAL_ADMIN_EMAIL", "")
+    INITIAL_ADMIN_FULL_NAME: str = os.getenv("INITIAL_ADMIN_FULL_NAME", "")
+    # Safety: avoid promoting an existing non-admin user to admin unless explicitly enabled.
+    INITIAL_ADMIN_ALLOW_PROMOTE_EXISTING: bool = os.getenv(
+        "INITIAL_ADMIN_ALLOW_PROMOTE_EXISTING", "false"
+    ).lower() == "true"
+
     @field_validator("UPLOAD_DIR")
     def create_upload_dir(cls, v):
         """Create upload directory if it doesn't exist."""

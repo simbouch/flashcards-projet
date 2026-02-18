@@ -160,3 +160,16 @@ def is_admin(user: models.User) -> bool:
         True if user is admin, False otherwise.
     """
     return user.role == models.UserRole.ADMIN.value
+
+
+async def get_current_admin_user(
+    current_user: models.User = Depends(get_current_active_user),
+) -> models.User:
+    """Get the current active admin user."""
+    if not is_admin(current_user):
+        logger.warning(f"Non-admin user attempted admin access: {current_user.username}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions",
+        )
+    return current_user

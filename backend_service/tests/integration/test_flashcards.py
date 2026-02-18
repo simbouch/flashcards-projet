@@ -3,7 +3,6 @@ Integration test for the flashcards functionality.
 This test simulates a complete flow from uploading an image to generating flashcards.
 """
 import pytest
-import requests
 import json
 import sys
 
@@ -12,6 +11,10 @@ pytestmark = [pytest.mark.flashcards, pytest.mark.integration]
 
 def login(username, password):
     """Login to the backend service and get an access token."""
+    # NOTE: Keep this as a "manual" integration flow script.
+    # We import requests lazily so pytest collection doesn't fail in environments
+    # where requests isn't installed.
+    import requests
     url = "http://localhost:8002/api/v1/auth/login"
     data = {
         "username": username,
@@ -29,6 +32,7 @@ def login(username, password):
 
 def extract_text_from_image(image_path):
     """Extract text from an image using the OCR service."""
+    import requests
     url = "http://localhost:8000/extract"
 
     with open(image_path, "rb") as f:
@@ -44,6 +48,7 @@ def extract_text_from_image(image_path):
 
 def create_document(token, title, image_path):
     """Create a new document in the backend service by uploading an image."""
+    import requests
     url = "http://localhost:8002/api/v1/documents/"
     headers = {
         "Authorization": f"Bearer {token}"
@@ -70,6 +75,7 @@ def create_document(token, title, image_path):
 
 def get_decks(token):
     """Get all decks for the current user."""
+    import requests
     url = "http://localhost:8002/api/v1/decks/"
     headers = {
         "Authorization": f"Bearer {token}"
@@ -98,6 +104,7 @@ def get_deck_for_document(token, document_id):
 
 def get_flashcards(token, deck_id):
     """Get flashcards for a deck."""
+    import requests
     url = f"http://localhost:8002/api/v1/flashcards/?deck_id={deck_id}"
     headers = {
         "Authorization": f"Bearer {token}"
@@ -114,6 +121,7 @@ def get_flashcards(token, deck_id):
 
 def main():
     """Main function."""
+    import requests
     if len(sys.argv) < 4:
         print("Usage: python test_flashcards.py <image_path> <username> <password>")
         return

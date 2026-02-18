@@ -91,6 +91,8 @@ services:
       - "8002:8002"
     volumes:
       - ./backend_service/src:/app/src
+      # Mount full backend_service folder so tests can import `backend_service.src.*`
+      - ./backend_service:/app/backend_service
       - ./db_module:/app/db_module
       - backend_logs:/app/logs
       - ./uploads:/app/uploads

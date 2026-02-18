@@ -45,6 +45,33 @@ def create_user(db: Session, user: schemas.UserCreate) -> models.User:
         logger.error(f"Failed to create user: {e}")
         raise ValueError("Username or email already exists")
 
+
+def create_user_with_role(db: Session, user: schemas.UserCreate, role: str) -> models.User:
+    """Create a new user with a specific role (admin-only operation)."""
+    if role not in {models.UserRole.USER.value, models.UserRole.ADMIN.value}:
+        raise ValueError("Invalid role")
+
+    hashed_password = get_password_hash(user.password)
+    db_user = models.User(
+        id=str(uuid.uuid4()),
+        email=user.email,
+        username=user.username,
+        full_name=user.full_name,
+        hashed_password=hashed_password,
+        role=role,
+        is_active=True,
+    )
+    try:
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        logger.info(f"Created user with role {role}: {db_user.username}")
+        return db_user
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"Failed to create user with role: {e}")
+        raise ValueError("Username or email already exists")
+
 def get_user(db: Session, user_id: str) -> Optional[models.User]:
     """Get a user by ID."""
     return db.query(models.User).filter(models.User.id == user_id).first()
@@ -73,6 +100,41 @@ def update_user(db: Session, user_id: str, user_update: schemas.UserUpdate) -> O
         logger.info(f"Updated user: {db_user.username}")
         return db_user
     return None
+
+
+def admin_update_user(db: Session, user_id: str, user_update: schemas.UserAdminUpdate) -> Optional[models.User]:
+    """Admin-only update of a user (supports role + is_active)."""
+    db_user = get_user(db, user_id)
+    if not db_user:
+        return None
+    update_data = user_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_user, key, value)
+    db.commit()
+    db.refresh(db_user)
+    logger.info(f"Admin updated user: {db_user.username}")
+    return db_user
+
+
+def set_user_password(db: Session, user_id: str, new_password: str) -> Optional[models.User]:
+    """Set a user's password (admin-only operation)."""
+    db_user = get_user(db, user_id)
+    if not db_user:
+        return None
+    db_user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    db.refresh(db_user)
+    logger.info(f"Password reset for user: {db_user.username}")
+    return db_user
+
+
+def count_admin_users(db: Session) -> int:
+    """Count how many admin users exist."""
+    return (
+        db.query(models.User)
+        .filter(models.User.role == models.UserRole.ADMIN.value)
+        .count()
+    )
 
 def delete_user(db: Session, user_id: str) -> bool:
     """Delete a user."""
