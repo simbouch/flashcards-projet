@@ -38,6 +38,7 @@ services:
       - "8001:8001"
     volumes:
       - ./llm_service/src:/app/src
+      - ./llm_service/tests:/app/tests
       - llm_logs:/app/logs
       - llm_models:/app/models
     environment:

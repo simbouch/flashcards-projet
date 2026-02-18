@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items>
+  <item id="xml-1">
+    <title>ETL</title>
+    <text>ETL stands for Extract, Transform, Load and is used to build datasets from multiple sources.</text>
+  </item>
+</items>

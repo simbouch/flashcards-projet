@@ -47,7 +47,7 @@ class LLMServiceClient:
                 response = await client.post(
                     f"{self.base_url}/generate",
                     json=data,
-                    timeout=60.0  # 60 seconds timeout
+                    timeout=settings.LLM_SERVICE_TIMEOUT_SECONDS
                 )
                 
                 # Check response status
@@ -63,8 +63,10 @@ class LLMServiceClient:
             raise Exception(f"LLM service error: {e.response.status_code} - {e.response.text}")
             
         except httpx.RequestError as e:
-            logger.error(f"LLM service request error: {str(e)}")
-            raise Exception(f"LLM service request error: {str(e)}")
+            # Some httpx exceptions (e.g. ReadTimeout) stringify to an empty string.
+            msg = str(e) or repr(e)
+            logger.error(f"LLM service request error: {type(e).__name__}: {msg}")
+            raise Exception(f"LLM service request error: {type(e).__name__}: {msg}")
             
         except Exception as e:
             logger.exception(f"Unexpected error during flashcard generation: {str(e)}")
@@ -98,7 +100,7 @@ class LLMServiceClient:
                 response = await client.post(
                     f"{self.base_url}/generate/chunks",
                     json=data,
-                    timeout=60.0  # 60 seconds timeout
+                    timeout=settings.LLM_SERVICE_TIMEOUT_SECONDS
                 )
                 
                 # Check response status
@@ -114,8 +116,9 @@ class LLMServiceClient:
             raise Exception(f"LLM service error: {e.response.status_code} - {e.response.text}")
             
         except httpx.RequestError as e:
-            logger.error(f"LLM service request error: {str(e)}")
-            raise Exception(f"LLM service request error: {str(e)}")
+            msg = str(e) or repr(e)
+            logger.error(f"LLM service request error: {type(e).__name__}: {msg}")
+            raise Exception(f"LLM service request error: {type(e).__name__}: {msg}")
             
         except Exception as e:
             logger.exception(f"Unexpected error during flashcard generation from chunks: {str(e)}")

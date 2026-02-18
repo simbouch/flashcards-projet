@@ -1,0 +1,4 @@
+[
+  {"id": "json-1", "title": "Data cleaning", "text": "Data cleaning is the process of fixing or removing incorrect, corrupted, incorrectly formatted, duplicate, or incomplete data."},
+  {"id": "json-2", "title": "Feature engineering", "text": "Feature engineering is the process of using domain knowledge to extract features from raw data."}
+]

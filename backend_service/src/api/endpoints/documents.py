@@ -10,7 +10,7 @@ import aiofiles
 from pathlib import Path
 
 from db_module import crud, models, schemas
-from db_module.database import get_db
+from db_module.database import get_db, SessionLocal
 from ...auth.jwt import get_current_active_user
 from ...config import settings
 from ...logger_config import logger
@@ -23,10 +23,23 @@ router = APIRouter()
 ocr_client = OCRServiceClient()
 llm_client = LLMServiceClient()
 
+# Factory for creating DB sessions in background tasks (easy to monkeypatch in tests)
+SessionLocalFactory = SessionLocal
+
+
+def _guess_mime_type_from_ext(file_ext: str) -> str:
+    ext = (file_ext or "").lower().lstrip(".")
+    if ext == "pdf":
+        return "application/pdf"
+    if ext in ("jpg", "jpeg"):
+        return "image/jpeg"
+    if ext == "png":
+        return "image/png"
+    return "application/octet-stream"
+
 async def process_document(
     document_id: str,
-    file_path: Path,
-    db: Session
+    file_path: Path
 ):
     """
     Process a document: extract text with OCR and generate flashcards.
@@ -36,6 +49,7 @@ async def process_document(
         file_path: Path to the document file.
         db: Database session.
     """
+    db = SessionLocalFactory()
     try:
         # Update document status to OCR processing
         crud.update_document_status(
@@ -64,7 +78,11 @@ async def process_document(
         )
 
         # Generate flashcards
-        flashcard_result = await llm_client.generate_flashcards(extracted_text, num_cards=10)
+        # Keep the pipeline responsive by default; can be overridden via env.
+        flashcard_result = await llm_client.generate_flashcards(
+            extracted_text,
+            num_cards=settings.DEFAULT_NUM_CARDS_PER_DOCUMENT
+        )
 
         # Create a deck for the flashcards
         document = crud.get_document(db, document_id)
@@ -99,6 +117,8 @@ async def process_document(
         crud.update_document_status(
             db, document_id, models.DocumentStatus.ERROR.value, str(e)
         )
+    finally:
+        db.close()
 
 @router.post("/", response_model=schemas.Document)
 async def create_document(
@@ -123,12 +143,36 @@ async def create_document(
     unique_filename = f"{uuid.uuid4()}.{file_ext}"
     file_path = settings.UPLOAD_DIR / unique_filename
 
-    # Save file
+    # Ensure upload dir exists
+    settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Save file (stream) + enforce max upload size
     try:
         async with aiofiles.open(file_path, "wb") as f:
-            content = await file.read()
-            await f.write(content)
+            max_size = int(settings.MAX_UPLOAD_SIZE)
+            total = 0
+            chunk_size = 1024 * 1024  # 1MB
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > max_size:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"File too large. Max size is {max_size} bytes."
+                    )
+                await f.write(chunk)
     except Exception as e:
+        # Cleanup partially written file
+        try:
+            if file_path.exists():
+                file_path.unlink()
+        except Exception:
+            logger.warning(f"Failed to cleanup partial upload: {file_path}")
+
+        if isinstance(e, HTTPException):
+            raise
         logger.exception(f"Error saving file: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -138,7 +182,7 @@ async def create_document(
     # Create document in database
     document_data = schemas.DocumentCreate(
         filename=file.filename,
-        mime_type=file.content_type or f"image/{file_ext}"
+        mime_type=file.content_type or _guess_mime_type_from_ext(file_ext)
     )
     document = crud.create_document(
         db, document_data, current_user.id, str(file_path)
@@ -146,7 +190,7 @@ async def create_document(
 
     # Process document in background
     background_tasks.add_task(
-        process_document, document.id, file_path, db
+        process_document, document.id, file_path
     )
 
     logger.info(f"Document created: {document.id}")

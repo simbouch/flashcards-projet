@@ -8,6 +8,17 @@ from typing import Dict, Any, Optional
 from ..config import settings
 from ..logger_config import logger
 
+
+def _guess_mime_type(file_path: Path) -> str:
+    ext = file_path.suffix.lower()
+    if ext == ".pdf":
+        return "application/pdf"
+    if ext in (".jpg", ".jpeg"):
+        return "image/jpeg"
+    if ext == ".png":
+        return "image/png"
+    return "application/octet-stream"
+
 class OCRServiceClient:
     """Client for the OCR service."""
     
@@ -41,7 +52,7 @@ class OCRServiceClient:
             file_content = await f.read()
         
         # Prepare file for upload
-        files = {"file": (file_path.name, file_content, f"image/{file_path.suffix[1:]}")}
+        files = {"file": (file_path.name, file_content, _guess_mime_type(file_path))}
         
         # Send request to OCR service
         try:

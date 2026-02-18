@@ -1,0 +1,2 @@
+pytest>=8,<9
+pyspark==4.1.1

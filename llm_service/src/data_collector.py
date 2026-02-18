@@ -34,7 +34,7 @@ class UserInteraction:
 @dataclass
 class UserFeedback:
     """User feedback data structure."""
-    interaction_id: str
+    interaction_id: int
     rating: int  # 1-5 scale
     feedback_text: Optional[str]
     card_quality_rating: Optional[int]
@@ -471,7 +471,7 @@ if __name__ == "__main__":
 
     # Example feedback
     feedback = UserFeedback(
-        interaction_id=str(interaction_id),
+        interaction_id=int(interaction_id),
         rating=4,
         feedback_text="Good quality flashcard",
         card_quality_rating=4,

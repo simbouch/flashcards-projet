@@ -199,7 +199,7 @@ class GenerationResponse(BaseModel):
 
 class FeedbackRequest(BaseModel):
     """Request model for user feedback."""
-    interaction_id: str = Field(..., description="ID of the interaction being rated")
+    interaction_id: int = Field(..., description="ID of the interaction being rated")
     rating: int = Field(..., description="Overall rating (1-5)", ge=1, le=5)
     feedback_text: Optional[str] = Field(None, description="Optional feedback text")
     card_quality_rating: Optional[int] = Field(None, description="Card quality rating (1-5)", ge=1, le=5)
@@ -286,7 +286,13 @@ async def generate_flashcards(request: Request, generation_request: TextGenerati
             response_time=response_time,
             timestamp=datetime.now()
         )
-        data_collector.record_user_interaction(interaction)
+        interaction_id = data_collector.record_user_interaction(interaction)
+
+        # Expose interaction_id so clients can submit feedback
+        if isinstance(result, dict):
+            metadata = result.setdefault("metadata", {})
+            if isinstance(metadata, dict):
+                metadata["interaction_id"] = interaction_id
 
         # Update success metrics
         llm_generation_requests_total.labels(request_type="text", status="success").inc()
@@ -323,13 +329,40 @@ async def generate_flashcards_from_chunks(request: Request, chunks_request: Chun
             logger.exception(f"Failed to initialize generator: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to initialize LLM service: {str(e)}")
 
-    # Generate flashcards
+    # Basic monitoring
+    start_time = time.time()
+    session_id = f"session_{int(start_time)}"
+    client_ip = get_remote_address(request)
+    llm_active_generations.inc()
+
     try:
         result = await generator.generate_flashcards_from_chunks(chunks_request.chunks, chunks_request.num_cards)
+
+        response_time = time.time() - start_time
+        llm_generation_duration.labels(request_type="chunks").observe(response_time)
+
+        # Record user interaction for training data collection
+        interaction = UserInteraction(
+            session_id=session_id,
+            user_id=client_ip,
+            input_text="\n\n".join(chunks_request.chunks),
+            generated_cards=result.get('flashcards', []),
+            response_time=response_time,
+            timestamp=datetime.now()
+        )
+        interaction_id = data_collector.record_user_interaction(interaction)
+
+        if isinstance(result, dict):
+            metadata = result.setdefault("metadata", {})
+            if isinstance(metadata, dict):
+                metadata["interaction_id"] = interaction_id
+
         return result
     except Exception as e:
         logger.exception(f"Error generating flashcards from chunks: {e}")
         raise HTTPException(status_code=500, detail=f"Error generating flashcards: {str(e)}")
+    finally:
+        llm_active_generations.dec()
 
 @app.post("/feedback")
 async def submit_feedback(feedback_request: FeedbackRequest):

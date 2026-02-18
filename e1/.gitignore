@@ -1,0 +1,10 @@
+# Generated data
+/data/*.db
+/data/dumps/
+/data/exports/
+/data/tmp/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/

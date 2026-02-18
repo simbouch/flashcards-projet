@@ -1,0 +1,31 @@
+{
+  "paths": {
+    "data_dir": "e1/data",
+    "wikipedia_external_db": "e1/data/wikipedia_external.db",
+    "flashcards2_db": "e1/data/flashcards2.db",
+    "exports_dir": "e1/data/exports",
+    "dumps_dir": "e1/data/dumps"
+  },
+  "wikipedia_api": {
+    "base_url": "https://en.wikipedia.org/w/api.php",
+    "user_agent": "flashcards-e1-pipeline/1.0 (educational project)",
+    "keywords": ["machine learning", "neural network"],
+    "search_limit": 5
+  },
+  "wikimedia_dump": {
+    "titles_dump_url": "https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-all-titles-in-ns0.gz",
+    "dump_version": "enwiki-latest-all-titles-in-ns0",
+    "auto_download": false,
+    "max_titles": 5000,
+    "spark_master": "local[*]"
+  },
+  "scraping": {
+    "seed_urls": [
+      "https://en.wikipedia.org/wiki/Machine_learning"
+    ],
+    "timeout_seconds": 10
+  },
+  "file_sources": {
+    "samples_dir": "e1/data/samples"
+  }
+}

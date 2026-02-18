@@ -3,26 +3,143 @@ LLM model interface for flashcard generation.
 """
 import os
 import torch
+import re
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from .logger_config import logger
 from typing import List, Dict, Any, Optional, Tuple
 import nltk
 from nltk.tokenize import sent_tokenize
 import time
+import zipfile
 
-# Download NLTK data for sentence tokenization
-try:
-    nltk.data.find('tokenizers/punkt_tab')
-except LookupError:
+def _ensure_nltk_punkt() -> None:
+    """Best-effort ensure sentence tokenization data is available.
+
+    NLTK's `sent_tokenize` relies on the `punkt` resource.
+    """
+    # NLTK can sometimes end up with a corrupted punkt zip (partial download),
+    # which raises zipfile.BadZipFile on `nltk.data.find()`.
+    # This function must never crash import-time; we fallback later if needed.
     try:
-        nltk.download('punkt_tab')
-    except Exception:
-        # Fallback to older punkt if punkt_tab is not available
-        try:
-            nltk.download('punkt')
-        except Exception as e:
-            logger.warning(f"Failed to download NLTK data: {e}")
-            # We'll handle this gracefully in the code
+        nltk.data.find("tokenizers/punkt")
+        return
+    except (LookupError, zipfile.BadZipFile, OSError) as e:
+        logger.warning(
+            f"NLTK punkt not usable ({type(e).__name__}: {e}); attempting download"
+        )
+    except Exception as e:
+        logger.warning(
+            f"Unexpected error while checking NLTK punkt ({type(e).__name__}: {e}); attempting download"
+        )
+
+    try:
+        # quiet=True to reduce container logs
+        nltk.download("punkt", quiet=True)
+    except Exception as e:
+        logger.warning(f"Failed to download NLTK punkt data: {type(e).__name__}: {e}")
+
+
+def _fallback_sentence_split(text: str) -> List[str]:
+    """Fallback sentence splitter when NLTK punkt isn't available."""
+    # Insert line breaks after sentence end punctuation, then split.
+    normalized = re.sub(r"([.!?])\s+", r"\1\n", text.strip())
+    parts = [p.strip() for p in normalized.splitlines() if p.strip()]
+    return parts or ([text.strip()] if text.strip() else [])
+
+
+def parse_qa_pairs(text: str) -> List[Dict[str, str]]:
+    """Parse question/answer pairs from generated text.
+
+    Supports common formats (French/English), multi-line answers,
+    and provides a non-empty fallback when parsing fails.
+    """
+
+    def _strip_leading_markers(line: str) -> str:
+        # e.g. "1. Q:", "- Q:", "• R:"...
+        return re.sub(r"^\s*[-*•\d\.)\]]+\s*", "", line).strip()
+
+    q_prefixes = ("Q:", "Question:")
+    a_prefixes = ("R:", "Réponse:", "Reponse:", "A:", "Answer:")
+
+    lines = [ln.strip() for ln in text.splitlines()]
+
+    flashcards: List[Dict[str, str]] = []
+    current_q: Optional[str] = None
+    current_a_lines: List[str] = []
+
+    def _flush():
+        nonlocal current_q, current_a_lines
+        if current_q and current_a_lines:
+            answer = " ".join([x for x in current_a_lines if x]).strip()
+            if answer:
+                flashcards.append({"question": current_q.strip(), "answer": answer})
+        current_q = None
+        current_a_lines = []
+
+    for raw in lines:
+        if not raw:
+            continue
+
+        line = _strip_leading_markers(raw)
+
+        # Inline format: "Q: ... R: ..."
+        if any(line.startswith(p) for p in q_prefixes) and any(ap in line for ap in a_prefixes):
+            # flush previous pair if any
+            _flush()
+            # split at the first answer prefix occurrence
+            q_part = line
+            a_part = ""
+            for ap in a_prefixes:
+                idx = q_part.find(ap)
+                if idx != -1 and idx > 0:
+                    a_part = q_part[idx + len(ap):].strip()
+                    q_part = q_part[:idx].strip()
+                    break
+            # remove Q prefix
+            for qp in q_prefixes:
+                if q_part.startswith(qp):
+                    q_part = q_part[len(qp):].strip()
+                    break
+            if q_part and a_part:
+                flashcards.append({"question": q_part, "answer": a_part})
+            continue
+
+        if any(line.startswith(p) for p in q_prefixes):
+            _flush()
+            for qp in q_prefixes:
+                if line.startswith(qp):
+                    current_q = line[len(qp):].strip()
+                    break
+            continue
+
+        if current_q and any(line.startswith(p) for p in a_prefixes):
+            # start answer collection
+            for ap in a_prefixes:
+                if line.startswith(ap):
+                    current_a_lines = [line[len(ap):].strip()]
+                    break
+            continue
+
+        # Continuation lines for an answer (until next Q:)
+        if current_q and current_a_lines:
+            current_a_lines.append(line)
+
+    _flush()
+
+    if flashcards:
+        return flashcards
+
+    # Fallback: return a single card so the pipeline stays functional.
+    excerpt = " ".join([ln for ln in lines if ln]).strip()
+    excerpt = (excerpt[:600] + "…") if len(excerpt) > 600 else excerpt
+    if not excerpt:
+        excerpt = "(Aucun contenu généré)"
+    logger.warning("Unable to parse Q/A pairs from model output; returning fallback flashcard")
+    return [{"question": "Carte générée (format non standard)", "answer": excerpt}]
+
+
+# Download NLTK data for sentence tokenization (best-effort)
+_ensure_nltk_punkt()
 
 class LLMModel:
     """
@@ -107,7 +224,11 @@ class LLMModel:
             List of text chunks.
         """
         # Split text into sentences
-        sentences = sent_tokenize(text)
+        try:
+            sentences = sent_tokenize(text)
+        except (LookupError, zipfile.BadZipFile, OSError) as e:
+            logger.warning(f"NLTK punkt data missing ({e}); using fallback sentence splitter")
+            sentences = _fallback_sentence_split(text)
 
         chunks = []
         current_chunk = ""
@@ -190,62 +311,34 @@ class LLMModel:
 
         try:
             # Generate text
-            outputs = self.generator(
-                prompt,
-                max_length=len(self.tokenizer.encode(prompt)) + 500,
-                num_return_sequences=1,
-                temperature=0.7,
-                top_p=0.9,
-                do_sample=True
-            )
+            # Bound the amount of generation; using max_length based on prompt size can
+            # result in very long generations (and timeouts) on CPU.
+            gen_kwargs = {
+                "max_new_tokens": min(128 * max(1, int(num_cards)), 512),
+                "num_return_sequences": 1,
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "do_sample": True,
+                "return_full_text": False,
+            }
+            eos_id = getattr(self.tokenizer, "eos_token_id", None)
+            if eos_id is not None:
+                gen_kwargs["eos_token_id"] = eos_id
+
+            outputs = self.generator(prompt, **gen_kwargs)
 
             generated_text = outputs[0]['generated_text']
 
             # Extract Q/A pairs from the generated text
-            return self._parse_qa_pairs(generated_text)
+            return parse_qa_pairs(generated_text)
 
         except Exception as e:
             logger.exception(f"Error generating flashcards: {e}")
             # Return a default card indicating the error
             return [{"question": "Erreur de génération", "answer": f"Une erreur s'est produite: {str(e)}"}]
 
-    def _parse_qa_pairs(self, text: str) -> List[Dict[str, str]]:
-        """
-        Parse question-answer pairs from generated text.
-
-        Args:
-            text: The generated text containing Q/A pairs.
-
-        Returns:
-            List of flashcard dictionaries.
-        """
-        flashcards = []
-
-        # Split the text by lines
-        lines = text.split('\n')
-
-        current_question = None
-
-        for line in lines:
-            line = line.strip()
-
-            # Check for question line
-            if line.startswith('Q:'):
-                current_question = line[2:].strip()
-
-            # Check for answer line if we have a question
-            elif line.startswith('R:') and current_question:
-                answer = line[2:].strip()
-
-                # Add the pair to our flashcards
-                if current_question and answer:
-                    flashcards.append({
-                        "question": current_question,
-                        "answer": answer
-                    })
-                    current_question = None
-
-        return flashcards
+    # NOTE: parsing is implemented as a module-level function `parse_qa_pairs`
+    # so it can be unit-tested without loading the model.
 
     def save_model(self, path: str):
         """

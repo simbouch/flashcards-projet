@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     OCR_SERVICE_URL: str = os.getenv("OCR_SERVICE_URL", "http://ocr-service:8000")
     LLM_SERVICE_URL: str = os.getenv("LLM_SERVICE_URL", "http://llm-service:8001")
 
+    # External service request timeouts (seconds)
+    # NOTE: LLM generation can be slow on CPU, so this must be > 60s for reliability.
+    LLM_SERVICE_TIMEOUT_SECONDS: float = float(os.getenv("LLM_SERVICE_TIMEOUT_SECONDS", "300"))
+
+    # Flashcards generation defaults
+    DEFAULT_NUM_CARDS_PER_DOCUMENT: int = int(os.getenv("DEFAULT_NUM_CARDS_PER_DOCUMENT", "5"))
+
     # Database settings
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./data/flashcards.db")
 
