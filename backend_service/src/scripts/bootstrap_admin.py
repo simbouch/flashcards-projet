@@ -17,7 +17,9 @@ def bootstrap_initial_admin() -> None:
 
     Rules:
     - No-op when TESTING=true
-    - Requires INITIAL_ADMIN_USERNAME + INITIAL_ADMIN_PASSWORD
+    - Requires INITIAL_ADMIN_USERNAME.
+      - If creating a brand-new admin: also requires INITIAL_ADMIN_PASSWORD
+      - If promoting an existing user: requires INITIAL_ADMIN_ALLOW_PROMOTE_EXISTING=true
     - If an admin already exists -> no-op
     - If username/email already exists:
         - promote to admin only when INITIAL_ADMIN_ALLOW_PROMOTE_EXISTING=true
@@ -28,12 +30,16 @@ def bootstrap_initial_admin() -> None:
         return
 
     username = (settings.INITIAL_ADMIN_USERNAME or "").strip()
-    password = settings.INITIAL_ADMIN_PASSWORD or ""
-    if not username or not password:
+    if not username:
         return
 
-    email = (settings.INITIAL_ADMIN_EMAIL or "").strip() or f"{username}@example.com"
-    full_name = (settings.INITIAL_ADMIN_FULL_NAME or "").strip() or "Initial Admin"
+    if username.lower() == "system":
+        logger.warning("Initial admin bootstrap skipped: 'system' is a reserved username")
+        return
+
+    password = settings.INITIAL_ADMIN_PASSWORD or ""
+    email_setting = (settings.INITIAL_ADMIN_EMAIL or "").strip()
+    full_name_setting = (settings.INITIAL_ADMIN_FULL_NAME or "").strip()
 
     db = SessionLocal()
     try:
@@ -42,7 +48,7 @@ def bootstrap_initial_admin() -> None:
             return
 
         existing_by_username = crud.get_user_by_username(db, username)
-        existing_by_email = crud.get_user_by_email(db, email)
+        existing_by_email = crud.get_user_by_email(db, email_setting) if email_setting else None
         existing = existing_by_username or existing_by_email
 
         if existing:
@@ -57,6 +63,16 @@ def bootstrap_initial_admin() -> None:
             db.commit()
             logger.info(f"Promoted existing user to admin: {existing.username}")
             return
+
+        # No existing user to promote; create a new one (requires a password)
+        if not password:
+            logger.warning(
+                "Initial admin bootstrap skipped: no existing user to promote and INITIAL_ADMIN_PASSWORD is empty."
+            )
+            return
+
+        email = email_setting or f"{username}@example.com"
+        full_name = full_name_setting or "Initial Admin"
 
         # Create brand-new admin user (validates password strength via schema)
         user_in = schemas.UserCreate(

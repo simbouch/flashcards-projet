@@ -34,6 +34,47 @@ async def update_user_me(
     logger.info(f"User updated: {user.username}")
     return user
 
+
+@router.post("/me/delete", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_my_account(
+    payload: schemas.UserDeleteSelf,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Delete the currently authenticated user's account.
+
+    Requires password confirmation.
+    """
+    # Defensive: reserved internal account must never be deletable.
+    if (current_user.username or "").strip().lower() == "system":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="System account cannot be deleted",
+        )
+
+    if not crud.verify_password(payload.password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect password",
+        )
+
+    # Prevent deleting the last admin account
+    if is_admin(current_user) and crud.count_admin_users(db) <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete the last admin account",
+        )
+
+    ok = crud.delete_user(db, current_user.id)
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete account",
+        )
+
+    logger.info(f"User self-deleted: {current_user.username}")
+    return None
+
 @router.get("/", response_model=List[schemas.User])
 async def read_users(
     skip: int = 0,

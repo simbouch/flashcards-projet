@@ -2,6 +2,7 @@
 Test fixtures for the database module.
 """
 import pytest
+import uuid
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -107,7 +108,7 @@ def test_refresh_token(db_session, test_user):
     # Create the refresh token in the database
     from db_module.models import RefreshToken
     db_refresh_token = RefreshToken(
-        id=crud.generate_uuid(),
+        id=str(uuid.uuid4()),
         user_id=refresh_token.user_id,
         token=refresh_token.token,
         expires_at=refresh_token.expires_at,

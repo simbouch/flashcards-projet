@@ -13,6 +13,10 @@ from ...logger_config import logger
 router = APIRouter()
 
 
+def _is_system_user(user: models.User) -> bool:
+    return bool(user) and (user.username or "").lower() == "system"
+
+
 @router.get("/stats")
 async def admin_stats(
     _: models.User = Depends(get_current_admin_user),
@@ -48,6 +52,12 @@ async def admin_update_user(
     target = crud.get_user(db, user_id)
     if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if _is_system_user(target):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="System user cannot be modified",
+        )
 
     update_data = user_in.model_dump(exclude_unset=True)
 
@@ -92,6 +102,15 @@ async def admin_reset_password(
     _: models.User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
 ) -> Any:
+    target = crud.get_user(db, user_id)
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if _is_system_user(target):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="System user password cannot be reset",
+        )
+
     user = crud.set_user_password(db, user_id, payload.password)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -113,6 +132,12 @@ async def admin_delete_user(
     target = crud.get_user(db, user_id)
     if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if _is_system_user(target):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="System user cannot be deleted",
+        )
 
     if target.role == models.UserRole.ADMIN.value and crud.count_admin_users(db) <= 1:
         raise HTTPException(

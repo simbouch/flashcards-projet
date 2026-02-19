@@ -94,6 +94,9 @@ export const authAPI = {
   },
   logout(refreshToken) {
     return apiClient.post('/auth/logout', { refresh_token: refreshToken })
+  },
+  deleteAccount(password) {
+    return apiClient.post('/users/me/delete', { password })
   }
 }
 
@@ -196,10 +199,32 @@ export const studyAPI = {
   }
 }
 
+// Admin API
+export const adminAPI = {
+  getStats() {
+    return apiClient.get('/admin/stats')
+  },
+  getUsers(skip = 0, limit = 100) {
+    return apiClient.get('/admin/users', {
+      params: { skip, limit }
+    })
+  },
+  updateUser(userId, userData) {
+    return apiClient.patch(`/admin/users/${userId}`, userData)
+  },
+  resetPassword(userId, password) {
+    return apiClient.post(`/admin/users/${userId}/reset-password`, { password })
+  },
+  deleteUser(userId) {
+    return apiClient.delete(`/admin/users/${userId}`)
+  }
+}
+
 export default {
   auth: authAPI,
   documents: documentsAPI,
   decks: decksAPI,
   flashcards: flashcardsAPI,
-  study: studyAPI
+  study: studyAPI,
+  admin: adminAPI
 }

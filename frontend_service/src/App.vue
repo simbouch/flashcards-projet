@@ -57,6 +57,16 @@
               Public Decks
             </v-btn>
 
+            <v-btn
+              v-if="isAdmin"
+              variant="text"
+              to="/admin"
+              class="modern-btn mx-1"
+              prepend-icon="mdi-shield-account"
+            >
+              Admin
+            </v-btn>
+
             <!-- User Menu -->
             <v-menu offset-y>
               <template v-slot:activator="{ props }">
@@ -188,6 +198,14 @@
           title="Profile"
         ></v-list-item>
 
+        <v-list-item
+          v-if="isAuthenticated && isAdmin"
+          to="/admin"
+          class="modern-btn mb-2"
+          prepend-icon="mdi-shield-account"
+          title="Admin"
+        ></v-list-item>
+
         <v-divider class="my-4" v-if="isAuthenticated"></v-divider>
 
         <v-list-item
@@ -261,8 +279,16 @@ export default {
       }
     }
   },
+  created() {
+    // Best-effort profile refresh so role changes (e.g. promotion to admin)
+    // become visible without needing to manually clear localStorage.
+    const authStore = useAuthStore()
+    if (authStore.isAuthenticated) {
+      authStore.fetchUserProfile()
+    }
+  },
   computed: {
-    ...mapState(useAuthStore, ['isAuthenticated'])
+    ...mapState(useAuthStore, ['isAuthenticated', 'isAdmin'])
   },
   methods: {
     logout() {

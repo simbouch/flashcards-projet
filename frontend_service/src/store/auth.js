@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isAuthenticated: (state) => !!state.token,
+    isAdmin: (state) => state.user?.role === 'admin',
     currentUser: (state) => state.user
   },
 
@@ -88,6 +89,31 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         this.loading = false
         this.error = error.response?.data?.detail || 'Failed to update profile'
+        return false
+      }
+    },
+
+    async deleteAccount(password) {
+      this.loading = true
+      this.error = null
+
+      try {
+        await authAPI.deleteAccount(password)
+
+        // Clear auth state + localStorage immediately (user is deleted)
+        this.user = null
+        this.token = null
+        this.refreshToken = null
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        localStorage.removeItem('userId')
+
+        this.loading = false
+        return true
+      } catch (error) {
+        this.loading = false
+        this.error = error.response?.data?.detail || 'Failed to delete account'
         return false
       }
     },

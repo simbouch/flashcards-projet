@@ -552,11 +552,17 @@ export default {
 
       this.deletingAccount = true
 
-      // TODO: Implement account deletion
-      // This would require a backend endpoint
+      const success = await this.authStore.deleteAccount(this.deleteAccountPassword)
 
       this.deletingAccount = false
       this.showDeleteAccountDialog = false
+      this.deleteAccountPassword = ''
+
+      if (success) {
+        this.successMessage = 'Account deleted successfully'
+        // Redirect to register (user is logged out)
+        this.$router.push('/register')
+      }
     },
 
     async exportData() {

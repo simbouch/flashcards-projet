@@ -3,6 +3,7 @@ CRUD operations for database models.
 """
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_
 from . import models, schemas
 from loguru import logger
 from typing import List, Optional, Dict, Any, Union
@@ -136,15 +137,172 @@ def count_admin_users(db: Session) -> int:
         .count()
     )
 
+
+def _delete_deck_cascade(db: Session, deck_id: str) -> bool:
+    """Delete a deck and all dependent rows.
+
+    NOTE: SQLite foreign key constraints are not guaranteed to be enforced in this
+    project (depending on engine/PRAGMA). We therefore manually delete dependent
+    rows in the correct order to avoid orphans and FK violations.
+
+    This function does NOT commit.
+    """
+    db_deck = get_deck(db, deck_id)
+    if not db_deck:
+        return False
+
+    # Collect IDs for dependent deletes
+    flashcard_ids = [
+        fid for (fid,) in db.query(models.Flashcard.id)
+        .filter(models.Flashcard.deck_id == deck_id)
+        .all()
+    ]
+    session_ids = [
+        sid for (sid,) in db.query(models.StudySession.id)
+        .filter(models.StudySession.deck_id == deck_id)
+        .all()
+    ]
+
+    # Delete study records first (they reference both sessions and flashcards)
+    if session_ids and flashcard_ids:
+        (
+            db.query(models.StudyRecord)
+            .filter(
+                or_(
+                    models.StudyRecord.session_id.in_(session_ids),
+                    models.StudyRecord.flashcard_id.in_(flashcard_ids),
+                )
+            )
+            .delete(synchronize_session=False)
+        )
+    elif session_ids:
+        (
+            db.query(models.StudyRecord)
+            .filter(models.StudyRecord.session_id.in_(session_ids))
+            .delete(synchronize_session=False)
+        )
+    elif flashcard_ids:
+        (
+            db.query(models.StudyRecord)
+            .filter(models.StudyRecord.flashcard_id.in_(flashcard_ids))
+            .delete(synchronize_session=False)
+        )
+
+    # Then sessions, flashcards, associations, and finally the deck
+    (
+        db.query(models.StudySession)
+        .filter(models.StudySession.deck_id == deck_id)
+        .delete(synchronize_session=False)
+    )
+    (
+        db.query(models.Flashcard)
+        .filter(models.Flashcard.deck_id == deck_id)
+        .delete(synchronize_session=False)
+    )
+
+    # Many-to-many association rows
+    db.execute(
+        models.user_deck_association.delete().where(
+            models.user_deck_association.c.deck_id == deck_id
+        )
+    )
+
+    db.delete(db_deck)
+    return True
+
+
+def _delete_document_cascade(db: Session, document_id: str) -> bool:
+    """Delete a document and all dependent rows (decks, extracted text, etc.).
+
+    This function does NOT commit.
+    """
+    db_document = get_document(db, document_id)
+    if not db_document:
+        return False
+
+    # Delete decks linked to this document (and their dependents)
+    deck_ids = [
+        did for (did,) in db.query(models.Deck.id)
+        .filter(models.Deck.document_id == document_id)
+        .all()
+    ]
+    for deck_id in deck_ids:
+        _delete_deck_cascade(db, deck_id)
+
+    # Delete extracted text for this document
+    (
+        db.query(models.ExtractedText)
+        .filter(models.ExtractedText.document_id == document_id)
+        .delete(synchronize_session=False)
+    )
+
+    db.delete(db_document)
+    return True
+
 def delete_user(db: Session, user_id: str) -> bool:
     """Delete a user."""
     db_user = get_user(db, user_id)
-    if db_user:
-        db.delete(db_user)
-        db.commit()
-        logger.info(f"Deleted user: {db_user.username}")
-        return True
-    return False
+    if not db_user:
+        return False
+
+    # Protect internal system user from deletion.
+    if (db_user.username or "").lower() == "system":
+        logger.warning("Refusing to delete reserved system user")
+        return False
+
+    # 1) Delete the user's own study sessions + records first
+    session_ids = [
+        sid for (sid,) in db.query(models.StudySession.id)
+        .filter(models.StudySession.user_id == user_id)
+        .all()
+    ]
+    if session_ids:
+        (
+            db.query(models.StudyRecord)
+            .filter(models.StudyRecord.session_id.in_(session_ids))
+            .delete(synchronize_session=False)
+        )
+    (
+        db.query(models.StudySession)
+        .filter(models.StudySession.user_id == user_id)
+        .delete(synchronize_session=False)
+    )
+
+    # 2) Delete owned documents (and their dependent decks/text)
+    document_ids = [
+        did for (did,) in db.query(models.Document.id)
+        .filter(models.Document.owner_id == user_id)
+        .all()
+    ]
+    for document_id in document_ids:
+        _delete_document_cascade(db, document_id)
+
+    # 3) Delete owned decks not already removed via documents
+    deck_ids = [
+        did for (did,) in db.query(models.Deck.id)
+        .filter(models.Deck.owner_id == user_id)
+        .all()
+    ]
+    for deck_id in deck_ids:
+        _delete_deck_cascade(db, deck_id)
+
+    # 4) Remove many-to-many shares and refresh tokens
+    db.execute(
+        models.user_deck_association.delete().where(
+            models.user_deck_association.c.user_id == user_id
+        )
+    )
+    (
+        db.query(models.RefreshToken)
+        .filter(models.RefreshToken.user_id == user_id)
+        .delete(synchronize_session=False)
+    )
+
+    # 5) Finally delete the user
+    db.delete(db_user)
+    db.commit()
+    logger.info(f"Deleted user (cascade): {db_user.username}")
+    return True
 
 # Document CRUD operations
 def create_document(db: Session, document: schemas.DocumentCreate, owner_id: str, file_path: str) -> models.Document:
@@ -186,13 +344,12 @@ def update_document_status(db: Session, document_id: str, status: str, error_mes
 
 def delete_document(db: Session, document_id: str) -> bool:
     """Delete a document."""
-    db_document = get_document(db, document_id)
-    if db_document:
-        db.delete(db_document)
-        db.commit()
-        logger.info(f"Deleted document: {db_document.filename}")
-        return True
-    return False
+    ok = _delete_document_cascade(db, document_id)
+    if not ok:
+        return False
+    db.commit()
+    logger.info(f"Deleted document (cascade): {document_id}")
+    return True
 
 # ExtractedText CRUD operations
 def create_extracted_text(db: Session, extracted_text: schemas.ExtractedTextCreate) -> models.ExtractedText:
@@ -266,13 +423,12 @@ def update_deck(db: Session, deck_id: str, deck_update: schemas.DeckUpdate) -> O
 
 def delete_deck(db: Session, deck_id: str) -> bool:
     """Delete a deck."""
-    db_deck = get_deck(db, deck_id)
-    if db_deck:
-        db.delete(db_deck)
-        db.commit()
-        logger.info(f"Deleted deck: {db_deck.title}")
-        return True
-    return False
+    ok = _delete_deck_cascade(db, deck_id)
+    if not ok:
+        return False
+    db.commit()
+    logger.info(f"Deleted deck (cascade): {deck_id}")
+    return True
 
 def share_deck(db: Session, deck_id: str, user_id: str) -> bool:
     """Share a deck with a user."""
@@ -324,12 +480,19 @@ def update_flashcard(db: Session, flashcard_id: str, flashcard_update: schemas.F
 def delete_flashcard(db: Session, flashcard_id: str) -> bool:
     """Delete a flashcard."""
     db_flashcard = get_flashcard(db, flashcard_id)
-    if db_flashcard:
-        db.delete(db_flashcard)
-        db.commit()
-        logger.info(f"Deleted flashcard: {flashcard_id}")
-        return True
-    return False
+    if not db_flashcard:
+        return False
+
+    # Study records depend on flashcards
+    (
+        db.query(models.StudyRecord)
+        .filter(models.StudyRecord.flashcard_id == flashcard_id)
+        .delete(synchronize_session=False)
+    )
+    db.delete(db_flashcard)
+    db.commit()
+    logger.info(f"Deleted flashcard (cascade): {flashcard_id}")
+    return True
 
 # Authentication functions
 def authenticate_user(db: Session, username: str, password: str) -> Optional[models.User]:

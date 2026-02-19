@@ -241,3 +241,129 @@ def test_get_flashcards_by_deck(db_session, test_deck, test_flashcard):
     non_existent_id = str(uuid.uuid4())
     flashcards = crud.get_flashcards_by_deck(db_session, non_existent_id)
     assert len(flashcards) == 0
+
+
+def _create_study_session_and_record(db_session, user_id: str, deck_id: str, flashcard_id: str):
+    """Helper to create a study session + record for cascade deletion tests."""
+    study_session = models.StudySession(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        deck_id=deck_id,
+    )
+    db_session.add(study_session)
+    db_session.commit()
+
+    study_record = models.StudyRecord(
+        id=str(uuid.uuid4()),
+        is_correct=True,
+        session_id=study_session.id,
+        flashcard_id=flashcard_id,
+    )
+    db_session.add(study_record)
+    db_session.commit()
+    return study_session, study_record
+
+
+def test_delete_flashcard_cascade_deletes_study_records(db_session, test_user, test_deck, test_flashcard):
+    """Deleting a flashcard should remove dependent study records."""
+    _session, record = _create_study_session_and_record(
+        db_session,
+        user_id=test_user.id,
+        deck_id=test_deck.id,
+        flashcard_id=test_flashcard.id,
+    )
+
+    flashcard_id = test_flashcard.id
+    record_id = record.id
+
+    # Precondition
+    assert db_session.query(models.StudyRecord).filter_by(id=record_id).first() is not None
+
+    ok = crud.delete_flashcard(db_session, flashcard_id)
+    assert ok is True
+
+    assert crud.get_flashcard(db_session, flashcard_id) is None
+    assert (
+        db_session.query(models.StudyRecord)
+        .filter(models.StudyRecord.flashcard_id == flashcard_id)
+        .count()
+        == 0
+    )
+
+
+def test_delete_deck_cascade_deletes_flashcards_and_study(db_session, test_user, test_deck, test_flashcard):
+    """Deleting a deck should remove flashcards and study data linked to it."""
+    session, record = _create_study_session_and_record(
+        db_session,
+        user_id=test_user.id,
+        deck_id=test_deck.id,
+        flashcard_id=test_flashcard.id,
+    )
+
+    deck_id = test_deck.id
+    session_id = session.id
+    record_id = record.id
+
+    ok = crud.delete_deck(db_session, deck_id)
+    assert ok is True
+
+    assert crud.get_deck(db_session, deck_id) is None
+    assert db_session.query(models.Flashcard).filter_by(deck_id=deck_id).count() == 0
+    assert db_session.query(models.StudySession).filter_by(deck_id=deck_id).count() == 0
+    assert db_session.query(models.StudyRecord).filter_by(session_id=session_id).count() == 0
+    assert db_session.query(models.StudyRecord).filter_by(id=record_id).count() == 0
+
+
+def test_delete_document_cascade_deletes_decks_text_and_flashcards(
+    db_session, test_document, test_extracted_text, test_deck, test_flashcard
+):
+    """Deleting a document should remove extracted text + decks/flashcards tied to it."""
+    document_id = test_document.id
+    deck_id = test_deck.id
+    flashcard_id = test_flashcard.id
+
+    ok = crud.delete_document(db_session, document_id)
+    assert ok is True
+
+    assert crud.get_document(db_session, document_id) is None
+    assert crud.get_extracted_text_by_document(db_session, document_id) is None
+    assert crud.get_deck(db_session, deck_id) is None
+    assert crud.get_flashcard(db_session, flashcard_id) is None
+
+
+def test_delete_user_cascade_deletes_owned_content_and_tokens(
+    db_session,
+    test_user,
+    test_document,
+    test_extracted_text,
+    test_deck,
+    test_flashcard,
+    test_refresh_token,
+):
+    """Deleting a user should delete owned documents/decks/flashcards + tokens + study data."""
+    session, record = _create_study_session_and_record(
+        db_session,
+        user_id=test_user.id,
+        deck_id=test_deck.id,
+        flashcard_id=test_flashcard.id,
+    )
+
+    user_id = test_user.id
+    document_id = test_document.id
+    deck_id = test_deck.id
+    flashcard_id = test_flashcard.id
+    refresh_token_id = test_refresh_token.id
+    session_id = session.id
+    record_id = record.id
+
+    ok = crud.delete_user(db_session, user_id)
+    assert ok is True
+
+    assert crud.get_user(db_session, user_id) is None
+    assert crud.get_document(db_session, document_id) is None
+    assert crud.get_extracted_text_by_document(db_session, document_id) is None
+    assert crud.get_deck(db_session, deck_id) is None
+    assert crud.get_flashcard(db_session, flashcard_id) is None
+    assert db_session.query(models.RefreshToken).filter_by(id=refresh_token_id).count() == 0
+    assert db_session.query(models.StudySession).filter_by(id=session_id).count() == 0
+    assert db_session.query(models.StudyRecord).filter_by(id=record_id).count() == 0

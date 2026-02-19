@@ -96,3 +96,54 @@ def test_admin_cannot_demote_self(client, db_session):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 400
+
+
+def test_admin_cannot_modify_or_delete_system_user(client, db_session):
+    from db_module import crud, schemas, models
+    import uuid
+
+    # Create an admin
+    admin_in = schemas.UserCreate(
+        email="admin_sys@example.com",
+        username="adminsys",
+        password="Password123",
+        full_name="Admin",
+    )
+    admin = crud.create_user_with_role(db_session, admin_in, role=models.UserRole.ADMIN.value)
+    token = _login_and_get_token(client, admin.username, "Password123")
+
+    # Create a system user directly (bypassing role validation on create_user_with_role)
+    system_user = models.User(
+        id=str(uuid.uuid4()),
+        email="system@example.com",
+        username="system",
+        full_name="System User",
+        hashed_password=crud.get_password_hash("SomePassword123"),
+        role="system",
+        is_active=False,
+    )
+    db_session.add(system_user)
+    db_session.commit()
+
+    # Update forbidden
+    resp = client.patch(
+        f"/api/v1/admin/users/{system_user.id}",
+        json={"full_name": "Nope"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 400
+
+    # Reset password forbidden
+    resp = client.post(
+        f"/api/v1/admin/users/{system_user.id}/reset-password",
+        json={"password": "Newpass123"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 400
+
+    # Delete forbidden
+    resp = client.delete(
+        f"/api/v1/admin/users/{system_user.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 400

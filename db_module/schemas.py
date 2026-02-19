@@ -64,6 +64,15 @@ class UserCreate(UserBase):
             raise ValueError('Password must contain at least one number')
         return v
 
+
+class UserDeleteSelf(BaseModel):
+    """Payload for self-account deletion.
+
+    Requires the current password for confirmation.
+    """
+
+    password: str = Field(min_length=1)
+
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None

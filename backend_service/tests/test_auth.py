@@ -33,6 +33,29 @@ def test_login(client, test_user):
     )
     assert response.status_code == 401
 
+
+def test_login_system_user_forbidden(client):
+    """The reserved internal system account must never be able to log in."""
+    response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "system", "password": "Password123"},
+    )
+    assert response.status_code == 403
+
+
+def test_register_system_username_reserved(client):
+    """The username 'system' is reserved and must not be registrable."""
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "system2@example.com",
+            "username": "system",
+            "password": "Password123",
+            "full_name": "System",
+        },
+    )
+    assert response.status_code == 400
+
     # Test with non-existent username
     response = client.post(
         "/api/v1/auth/login",

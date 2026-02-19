@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from db_module.database import get_db
 from db_module.models import User, Deck, Flashcard, StudySession, StudyRecord
+from db_module import crud
 import uuid
+import secrets
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -149,21 +151,44 @@ def create_system_user(db: Session):
     """Create a system user if it doesn't exist"""
     system_user = db.query(User).filter(User.username == "system").first()
 
+    insecure_hash = "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW"  # legacy: "password"
+
     if not system_user:
         logger.info("Creating system user")
         system_user = User(
             id=str(uuid.uuid4()),
             username="system",
             email="system@example.com",
-            hashed_password="$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",  # "password"
+            # Never allow a known/default password for system accounts.
+            hashed_password=crud.get_password_hash(secrets.token_urlsafe(32)),
             full_name="System User",
-            is_active=True,
+            # System account is internal only; must never be able to log in.
+            is_active=False,
             role="system"
         )
         db.add(system_user)
         db.commit()
         db.refresh(system_user)
         logger.info(f"System user created with ID: {system_user.id}")
+
+    # Security hardening for existing deployments:
+    # - ensure system account stays inactive
+    # - ensure role stays "system"
+    # - rotate legacy known password hash if present
+    changed = False
+    if system_user.is_active:
+        system_user.is_active = False
+        changed = True
+    if (system_user.role or "") != "system":
+        system_user.role = "system"
+        changed = True
+    if not system_user.hashed_password or system_user.hashed_password == insecure_hash:
+        system_user.hashed_password = crud.get_password_hash(secrets.token_urlsafe(32))
+        changed = True
+    if changed:
+        db.commit()
+        db.refresh(system_user)
+        logger.info("System user hardened (inactive + secure password)")
 
     return system_user
 

@@ -109,6 +109,13 @@ services:
       - JWT_ALGORITHM=HS256
       - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=120
       - PYTHONPATH=/app
+      # Optional: initial admin bootstrap (DO NOT hardcode secrets in git)
+      # Set these in a local .env file (not committed) to create/promote an admin at startup.
+      - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME:-}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-}
+      - INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL:-}
+      - INITIAL_ADMIN_FULL_NAME=${INITIAL_ADMIN_FULL_NAME:-}
+      - INITIAL_ADMIN_ALLOW_PROMOTE_EXISTING=${INITIAL_ADMIN_ALLOW_PROMOTE_EXISTING:-false}
     depends_on:
       - ocr-service
       - llm-service

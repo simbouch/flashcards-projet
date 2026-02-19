@@ -26,6 +26,14 @@ async def login_access_token(
     """
     OAuth2 compatible token login, get an access token for future requests.
     """
+    # Hard block reserved internal account
+    if (form_data.username or "").strip().lower() == "system":
+        logger.warning("Blocked login attempt for reserved system account")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="System account cannot log in",
+        )
+
     # Try to authenticate with username/password
     user = crud.authenticate_user(
         db, form_data.username, form_data.password
@@ -135,6 +143,13 @@ async def register_user(
     """
     Register a new user.
     """
+    # Reserved usernames
+    if (user_in.username or "").strip().lower() == "system":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username is reserved",
+        )
+
     # Check if user with this email already exists
     user = crud.get_user_by_email(db, email=user_in.email)
     if user:

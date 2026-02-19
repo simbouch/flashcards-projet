@@ -10,6 +10,7 @@ import PublicDecksView from '../views/PublicDecksView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import StudyView from '../views/StudyView.vue'
 import StudyHistoryView from '../views/StudyHistoryView.vue'
+import AdminView from '../views/AdminView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 
 const routes = [
@@ -72,6 +73,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/admin',
+    name: 'admin',
+    component: AdminView,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: NotFoundView
@@ -84,13 +91,27 @@ const router = createRouter({
 })
 
 // Navigation guard
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
+  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+
+  // Best-effort profile refresh for protected routes.
+  // This ensures role changes (e.g. promotion to admin) are reflected even if
+  // localStorage has stale user data.
+  if (authStore.isAuthenticated && (requiresAdmin || (requiresAuth && !authStore.user))) {
+    try {
+      await authStore.fetchUserProfile()
+    } catch (e) {
+      // fetchUserProfile already sets store error; keep guard behavior deterministic.
+    }
+  }
 
   if (requiresAuth && !authStore.isAuthenticated) {
     next('/login')
+  } else if (requiresAdmin && !authStore.isAdmin) {
+    next('/')
   } else if (requiresGuest && authStore.isAuthenticated) {
     next('/')
   } else {
