@@ -371,6 +371,105 @@ def test_backend_admin_can_create_inactive_user_and_inactive_cannot_login():
     assert login_resp.status_code == 403, f"Inactive user should be forbidden: {login_resp.status_code} {login_resp.text}"
 
 
+def test_backend_admin_can_update_fields_reset_password_and_self_protection():
+    """Admin-only CRUD E2E: update user fields + reset password + verify admin self-protection."""
+    _require_e2e()
+    admin_username, admin_password = _e2e_admin_credentials()
+    admin_token = _backend_login_token(admin_username, admin_password)
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # Self-protection checks (should not mutate state)
+    me = requests.get(f"{BACKEND_SERVICE_URL}/api/v1/users/me", headers=headers, timeout=30)
+    assert me.status_code == 200, f"Failed to read /users/me: {me.status_code} {me.text}"
+    admin_id = me.json().get("id")
+    assert admin_id, f"No id in /users/me response: {me.json()}"
+
+    resp_demote = requests.patch(
+        f"{BACKEND_SERVICE_URL}/api/v1/admin/users/{admin_id}",
+        json={"role": "user"},
+        headers=headers,
+        timeout=30,
+    )
+    assert resp_demote.status_code == 400, f"Expected self-demotion to be blocked: {resp_demote.status_code} {resp_demote.text}"
+
+    resp_delete_self = requests.delete(
+        f"{BACKEND_SERVICE_URL}/api/v1/admin/users/{admin_id}",
+        headers=headers,
+        timeout=30,
+    )
+    assert resp_delete_self.status_code == 400, f"Expected self-delete to be blocked: {resp_delete_self.status_code} {resp_delete_self.text}"
+
+    # Create a user to mutate
+    unique = uuid.uuid4().hex[:10]
+    original_password = "Password123!"
+    created_username = f"e2e_admin_mut_{unique}"
+    create_payload = {
+        "email": f"e2e_admin_mut_{unique}@example.com",
+        "username": created_username,
+        "password": original_password,
+        "full_name": "E2E Mut User",
+        "role": "user",
+        "is_active": True,
+    }
+    resp_create = requests.post(
+        f"{BACKEND_SERVICE_URL}/api/v1/admin/users",
+        json=create_payload,
+        headers=headers,
+        timeout=30,
+    )
+    assert resp_create.status_code == 201, f"Admin create user failed: {resp_create.status_code} {resp_create.text}"
+    user_id = resp_create.json().get("id")
+    assert user_id, f"No id in create response: {resp_create.json()}"
+
+    # Update core fields
+    new_email = f"e2e_admin_mut_{unique}_new@example.com"
+    patch_payload = {
+        "email": new_email,
+        "full_name": "E2E Mut User Updated",
+        "role": "admin",
+    }
+    resp_patch = requests.patch(
+        f"{BACKEND_SERVICE_URL}/api/v1/admin/users/{user_id}",
+        json=patch_payload,
+        headers=headers,
+        timeout=30,
+    )
+    assert resp_patch.status_code == 200, f"Admin patch failed: {resp_patch.status_code} {resp_patch.text}"
+    patched = resp_patch.json()
+    assert patched.get("email") == new_email
+    assert patched.get("full_name") == patch_payload["full_name"]
+    assert patched.get("role") == "admin"
+
+    # Reset password and verify login works with the new password
+    new_password = "NewPassword123!"
+    resp_reset = requests.post(
+        f"{BACKEND_SERVICE_URL}/api/v1/admin/users/{user_id}/reset-password",
+        json={"password": new_password},
+        headers=headers,
+        timeout=30,
+    )
+    assert resp_reset.status_code == 200, f"Admin reset-password failed: {resp_reset.status_code} {resp_reset.text}"
+    token = _backend_login_token(created_username, new_password)
+    assert isinstance(token, str) and len(token) > 10
+
+    # Deactivate and verify login is forbidden
+    resp_deactivate = requests.patch(
+        f"{BACKEND_SERVICE_URL}/api/v1/admin/users/{user_id}",
+        json={"is_active": False},
+        headers=headers,
+        timeout=30,
+    )
+    assert resp_deactivate.status_code == 200, f"Admin deactivate failed: {resp_deactivate.status_code} {resp_deactivate.text}"
+    assert resp_deactivate.json().get("is_active") is False
+
+    login_resp = requests.post(
+        f"{BACKEND_SERVICE_URL}/api/v1/auth/login",
+        data={"username": created_username, "password": new_password},
+        timeout=30,
+    )
+    assert login_resp.status_code == 403, f"Inactive user should be forbidden: {login_resp.status_code} {login_resp.text}"
+
+
 def main():
     """Run all tests."""
     print("Testing application integration...")
