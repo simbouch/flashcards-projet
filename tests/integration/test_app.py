@@ -1,6 +1,25 @@
+"""Manual smoke-test script.
+
+This file started as a *manual* smoke-test script and is not deterministic
+enough to be collected as part of the default pytest run (it relies on global
+state and test ordering).
+
+Run it manually:
+    python tests/integration/test_app.py
+
+For a pytest E2E run against the docker stack, see:
+    tests/integration/test_app_integration.py
 """
-Test script to verify that the application works.
-"""
+
+if __name__ != "__main__":
+    import pytest
+
+    # Prevent pytest from collecting/running this legacy script as a test module.
+    pytest.skip(
+        "Legacy manual smoke-test script (not a real pytest test file). Run it with `python tests/integration/test_app.py`.",
+        allow_module_level=True,
+    )
+
 import requests
 import time
 import sys
@@ -14,7 +33,7 @@ def test_ocr_service():
     print("Testing OCR service...")
     try:
         # Check if the Swagger docs are accessible, which indicates the service is running
-        response = requests.get("http://localhost:8000/docs")
+        response = requests.get("http://localhost:8000/docs", timeout=20)
         if response.status_code == 200:
             print("✅ OCR service is running")
             assert True
@@ -29,7 +48,7 @@ def test_llm_service():
     """Test the LLM service."""
     print("Testing LLM service...")
     try:
-        response = requests.get("http://localhost:8001/health")
+        response = requests.get("http://localhost:8001/health", timeout=20)
         if response.status_code == 200 and response.json().get("status") == "ok":
             print("✅ LLM service is running")
             assert True
@@ -44,7 +63,7 @@ def test_backend_service():
     """Test the backend service."""
     print("Testing backend service...")
     try:
-        response = requests.get("http://localhost:8002/health")
+        response = requests.get("http://localhost:8002/health", timeout=20)
         if response.status_code == 200 and response.json().get("status") == "ok":
             print("✅ Backend service is running")
             assert True
@@ -59,7 +78,7 @@ def test_frontend_service():
     """Test the frontend service."""
     print("Testing frontend service...")
     try:
-        response = requests.get("http://localhost:8080")
+        response = requests.get("http://localhost:8080", timeout=20)
         if response.status_code == 200:
             print("✅ Frontend service is running")
             assert True
@@ -87,7 +106,8 @@ def test_user_registration():
                 "username": username,
                 "password": "Password123",
                 "full_name": "Test User"
-            }
+            },
+            timeout=30,
         )
         if response.status_code == 200:
             print("✅ User registration works")
@@ -116,7 +136,8 @@ def test_user_login():
 
         response = requests.post(
             "http://localhost:8002/api/v1/auth/login",
-            data=test_credentials
+            data=test_credentials,
+            timeout=30,
         )
         if response.status_code == 200 and "access_token" in response.json():
             print("✅ User login works")

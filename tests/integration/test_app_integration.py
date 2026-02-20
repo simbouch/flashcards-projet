@@ -9,8 +9,21 @@ import os
 import sys
 import pytest
 
-# Add the project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+pytestmark = pytest.mark.e2e
+
+_RUN_E2E = os.getenv("RUN_E2E", "").strip().lower() in {"1", "true", "yes"}
+
+
+def _require_e2e() -> None:
+    """Skip under pytest unless RUN_E2E=1/true/yes.
+
+    When running this file as a script (python tests/integration/test_app_integration.py),
+    we always run.
+    """
+    if __name__ != "__main__" and not _RUN_E2E:
+        pytest.skip(
+            "E2E integration test requires running services. Set RUN_E2E=1 to run.",
+        )
 
 # Service URLs
 OCR_SERVICE_URL = "http://localhost:8000"
@@ -18,9 +31,13 @@ LLM_SERVICE_URL = "http://localhost:8001"
 BACKEND_SERVICE_URL = "http://localhost:8002"
 FRONTEND_SERVICE_URL = "http://localhost:8080"
 
-# Test credentials
-TEST_USERNAME = "testuser"
-TEST_PASSWORD = "Password123"
+# This test talks to running Docker services on localhost.
+# By default we skip under pytest to avoid breaking local/CI runs.
+# Run explicitly with:
+#   $env:RUN_E2E='1'; python -m pytest -c tests/integration/pytest.ini -q
+#
+# (We use a dedicated pytest.ini here so running this test from the host does
+# not require the full backend_service python dependencies.)
 
 # Test image path
 TEST_IMAGE_PATH = os.path.join(os.path.dirname(__file__), "images/test.png")
@@ -32,18 +49,36 @@ flashcards_value = None
 llm_flashcards_value = None
 
 
+def _ocr_extract_text() -> str:
+    """Helper: call OCR service and return extracted text."""
+    # Check if the test image exists
+    assert os.path.exists(TEST_IMAGE_PATH), f"Test image not found at {TEST_IMAGE_PATH}"
+
+    with open(TEST_IMAGE_PATH, "rb") as f:
+        files = {"file": (os.path.basename(TEST_IMAGE_PATH), f, "image/png")}
+        response = requests.post(f"{OCR_SERVICE_URL}/extract", files=files, timeout=60)
+
+    assert response.status_code == 200, "OCR service failed to extract text"
+    payload = response.json()
+    assert "text" in payload, "OCR service response does not contain text"
+    assert len(payload["text"]) > 0, "OCR service extracted empty text"
+
+    return payload["text"]
+
+
 def test_services_health():
     """Test that all services are running."""
+    _require_e2e()
     services = [
         {"name": "OCR Service", "url": f"{OCR_SERVICE_URL}/docs"},
         {"name": "LLM Service", "url": f"{LLM_SERVICE_URL}/health"},
-        {"name": "Backend Service", "url": f"{BACKEND_SERVICE_URL}/"},
-        {"name": "Frontend Service", "url": f"{FRONTEND_SERVICE_URL}"},
+        {"name": "Backend Service", "url": f"{BACKEND_SERVICE_URL}/health"},
+        {"name": "Frontend Service", "url": f"{FRONTEND_SERVICE_URL}/"},
     ]
 
     for service in services:
         try:
-            response = requests.get(service["url"])
+            response = requests.get(service["url"], timeout=20)
             assert response.status_code == 200, f"{service['name']} is not running"
             print(f"✅ {service['name']} is running")
         except requests.exceptions.ConnectionError:
@@ -52,38 +87,29 @@ def test_services_health():
 
 def test_ocr_service():
     """Test the OCR service."""
-    # Check if the test image exists
-    assert os.path.exists(TEST_IMAGE_PATH), f"Test image not found at {TEST_IMAGE_PATH}"
-
-    # Extract text from the image
-    with open(TEST_IMAGE_PATH, "rb") as f:
-        files = {"file": (os.path.basename(TEST_IMAGE_PATH), f, "image/png")}
-        response = requests.post(f"{OCR_SERVICE_URL}/extract", files=files)
-
-    assert response.status_code == 200, "OCR service failed to extract text"
-    assert "text" in response.json(), "OCR service response does not contain text"
-    assert len(response.json()["text"]) > 0, "OCR service extracted empty text"
-
-    print(f"✅ OCR service extracted text: {response.json()['text'][:100]}...")
+    _require_e2e()
+    text = _ocr_extract_text()
+    print(f"✅ OCR service extracted text: {text[:100]}...")
     # Store the extracted text in a global variable for use in other tests
     global extracted_text_value
-    extracted_text_value = response.json()["text"]
-    return extracted_text_value
+    extracted_text_value = text
 
 
 @pytest.fixture
 def extracted_text():
     """Extract text from the test image."""
-    return test_ocr_service()
+    _require_e2e()
+    return _ocr_extract_text()
 
 def test_llm_service(extracted_text):
     """Test the LLM service."""
+    _require_e2e()
     # Generate flashcards from the text
     data = {
         "text": extracted_text,
         "task": "flashcards"
     }
-    response = requests.post(f"{LLM_SERVICE_URL}/generate", json=data)
+    response = requests.post(f"{LLM_SERVICE_URL}/generate", json=data, timeout=300)
 
     assert response.status_code == 200, "LLM service failed to generate flashcards"
     assert "flashcards" in response.json(), "LLM service response does not contain flashcards"
@@ -97,14 +123,31 @@ def test_llm_service(extracted_text):
 
 def test_backend_service():
     """Test the backend service."""
-    # Login
-    login_data = {
-        "username": TEST_USERNAME,
-        "password": TEST_PASSWORD
-    }
+    _require_e2e()
+    # Register a unique user for this run
+    unique = uuid.uuid4().hex[:10]
+    username = f"e2e_{unique}"
+    password = "Password123!"
+    email = f"{username}@example.com"
+
+    reg = requests.post(
+        f"{BACKEND_SERVICE_URL}/api/v1/auth/register",
+        json={
+            "email": email,
+            "username": username,
+            "password": password,
+            "full_name": "E2E Test User",
+        },
+        timeout=30,
+    )
+    assert reg.status_code in (200, 201), f"Registration failed: {reg.status_code} {reg.text}"
+
+    # Login (OAuth2PasswordRequestForm style: form-encoded)
+    login_data = {"username": username, "password": password}
     response = requests.post(
         f"{BACKEND_SERVICE_URL}/api/v1/auth/login",
-        data=login_data
+        data=login_data,
+        timeout=30,
     )
 
     assert response.status_code == 200, "Login failed"
@@ -129,7 +172,8 @@ def test_backend_service():
             f"{BACKEND_SERVICE_URL}/api/v1/documents/",
             headers=headers,
             files=files,
-            data=data
+            data=data,
+            timeout=120,
         )
 
     assert response.status_code == 200, "Document creation failed"
@@ -139,13 +183,14 @@ def test_backend_service():
     print(f"✅ Document created with ID: {document_id}")
 
     # Wait for flashcards to be generated
-    max_attempts = 24  # Increased to allow more time (2 minutes)
+    max_attempts = 40  # ~200s, allows for cold model start + generation
     status = None
     for attempt in range(max_attempts):
         print(f"Checking document status (attempt {attempt + 1}/{max_attempts})...")
         response = requests.get(
             f"{BACKEND_SERVICE_URL}/api/v1/documents/{document_id}",
-            headers=headers
+            headers=headers,
+            timeout=30,
         )
 
         assert response.status_code == 200, "Failed to get document"
@@ -175,7 +220,8 @@ def test_backend_service():
     # Get decks
     response = requests.get(
         f"{BACKEND_SERVICE_URL}/api/v1/decks/",
-        headers=headers
+        headers=headers,
+        timeout=30,
     )
 
     assert response.status_code == 200, "Failed to get decks"
@@ -199,7 +245,8 @@ def test_backend_service():
     # Get flashcards
     response = requests.get(
         f"{BACKEND_SERVICE_URL}/api/v1/flashcards/?deck_id={deck.get('id')}",
-        headers=headers
+        headers=headers,
+        timeout=30,
     )
 
     assert response.status_code == 200, "Failed to get flashcards"
@@ -225,7 +272,7 @@ def main():
         test_services_health()
 
         # Test OCR service
-        text = test_ocr_service()
+        text = _ocr_extract_text()
 
         # Test LLM service
         try:
