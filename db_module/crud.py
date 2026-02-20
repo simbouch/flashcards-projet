@@ -73,6 +73,40 @@ def create_user_with_role(db: Session, user: schemas.UserCreate, role: str) -> m
         logger.error(f"Failed to create user with role: {e}")
         raise ValueError("Username or email already exists")
 
+
+def admin_create_user(db: Session, user: schemas.AdminUserCreate) -> models.User:
+    """Admin-only creation of a new user (supports role + is_active)."""
+    role = user.role
+    if role not in {models.UserRole.USER.value, models.UserRole.ADMIN.value}:
+        raise ValueError("Invalid role")
+
+    # Defense-in-depth: reserve the system username at the CRUD layer too.
+    if (user.username or "").lower() == "system":
+        raise ValueError("Username 'system' is reserved")
+
+    hashed_password = get_password_hash(user.password)
+    db_user = models.User(
+        id=str(uuid.uuid4()),
+        email=user.email,
+        username=user.username,
+        full_name=user.full_name,
+        hashed_password=hashed_password,
+        role=role,
+        is_active=bool(user.is_active),
+    )
+    try:
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        logger.info(
+            f"Admin created user {db_user.username} (role={db_user.role}, is_active={db_user.is_active})"
+        )
+        return db_user
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"Failed to admin-create user: {e}")
+        raise ValueError("Username or email already exists")
+
 def get_user(db: Session, user_id: str) -> Optional[models.User]:
     """Get a user by ID."""
     return db.query(models.User).filter(models.User.id == user_id).first()
@@ -111,7 +145,12 @@ def admin_update_user(db: Session, user_id: str, user_update: schemas.UserAdminU
     update_data = user_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_user, key, value)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"Failed to admin-update user: {e}")
+        raise ValueError("Username or email already exists")
     db.refresh(db_user)
     logger.info(f"Admin updated user: {db_user.username}")
     return db_user

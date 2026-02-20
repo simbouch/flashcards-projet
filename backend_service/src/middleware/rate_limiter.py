@@ -16,6 +16,19 @@ redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
 # Check if we're in testing mode
 is_testing = os.getenv("TESTING", "false").lower() == "true"
 
+
+def _no_rate_limit():
+    """Return a decorator that does nothing.
+
+    In unit tests we want deterministic behavior and should not fail due to
+    cumulative rate limiting across the test suite.
+    """
+
+    def decorator(func):
+        return func
+
+    return decorator
+
 if is_testing:
     # Use memory storage for testing
     redis_client = None  # Don't initialize Redis client in testing
@@ -60,18 +73,26 @@ def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 # Rate limiting decorators for different endpoint types
 def auth_rate_limit():
     """Rate limit for authentication endpoints (stricter)"""
+    if is_testing:
+        return _no_rate_limit()
     return limiter.limit("20/minute")
 
 def api_rate_limit():
     """Rate limit for general API endpoints"""
+    if is_testing:
+        return _no_rate_limit()
     return limiter.limit("100/minute")
 
 def upload_rate_limit():
     """Rate limit for file upload endpoints (more restrictive)"""
+    if is_testing:
+        return _no_rate_limit()
     return limiter.limit("10/minute")
 
 def ai_rate_limit():
     """Rate limit for AI service endpoints (most restrictive)"""
+    if is_testing:
+        return _no_rate_limit()
     return limiter.limit("5/minute")
 
 # Health check function for Redis

@@ -42,6 +42,26 @@ async def admin_list_users(
     return crud.get_users(db, skip=skip, limit=limit)
 
 
+@router.post("/users", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
+async def admin_create_user(
+    user_in: schemas.AdminUserCreate,
+    _: models.User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+) -> Any:
+    """Create a user as an admin (role + is_active supported)."""
+    if (user_in.username or "").lower() == "system":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username 'system' is reserved",
+        )
+    try:
+        created = crud.admin_create_user(db, user_in)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    logger.info(f"Admin created user {created.username}")
+    return created
+
+
 @router.patch("/users/{user_id}", response_model=schemas.User)
 async def admin_update_user(
     user_id: str,
@@ -60,6 +80,12 @@ async def admin_update_user(
         )
 
     update_data = user_in.model_dump(exclude_unset=True)
+
+    if (update_data.get("username") or "").lower() == "system":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username 'system' is reserved",
+        )
 
     # Prevent admin from locking themselves out
     if user_id == current_admin.id:
@@ -88,7 +114,10 @@ async def admin_update_user(
                 detail="Cannot demote the last admin",
             )
 
-    updated = crud.admin_update_user(db, user_id, user_in)
+    try:
+        updated = crud.admin_update_user(db, user_id, user_in)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     logger.info(f"Admin updated user {updated.username}")

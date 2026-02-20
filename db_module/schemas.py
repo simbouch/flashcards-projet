@@ -65,6 +65,23 @@ class UserCreate(UserBase):
         return v
 
 
+class AdminUserCreate(UserCreate):
+    """Admin-only user creation payload.
+
+    Allows setting role and activation status at creation time.
+    """
+
+    role: str = "user"
+    is_active: bool = True
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str):
+        if v not in {"user", "admin"}:
+            raise ValueError("Role must be 'user' or 'admin'")
+        return v
+
+
 class UserDeleteSelf(BaseModel):
     """Payload for self-account deletion.
 
@@ -85,10 +102,20 @@ class UserAdminUpdate(BaseModel):
     Allows updating fields that regular users should not control (e.g. role).
     """
 
+    username: Optional[str] = None
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     is_active: Optional[bool] = None
     role: Optional[str] = None
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: Optional[str]):
+        if v is None:
+            return v
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+            raise ValueError("Username must be alphanumeric with optional underscores and hyphens")
+        return v
 
     @field_validator("role")
     @classmethod
