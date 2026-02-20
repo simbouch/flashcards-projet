@@ -11,6 +11,8 @@ services:
       - "8000:8000"
     volumes:
       - ./ocr_service/src:/app/src
+      - ./ocr_service/tests:/app/tests:ro
+      - ./pytest.ini:/app/pytest.ini:ro
       - ocr_logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
@@ -39,6 +41,7 @@ services:
     volumes:
       - ./llm_service/src:/app/src
       - ./llm_service/tests:/app/tests
+      - ./pytest.ini:/app/pytest.ini:ro
       - llm_logs:/app/logs
       - llm_models:/app/models
     environment:
@@ -94,6 +97,7 @@ services:
       # Mount full backend_service folder so tests can import `backend_service.src.*`
       - ./backend_service:/app/backend_service
       - ./db_module:/app/db_module
+      - ./pytest.ini:/app/pytest.ini:ro
       - backend_logs:/app/logs
       - ./uploads:/app/uploads
       - db_data:/app/data
