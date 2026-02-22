@@ -37,10 +37,37 @@ def parse_qa_pairs(text: str) -> List[Dict[str, str]]:
         # e.g. "1. Q:", "- Q:", "• R:"...
         return re.sub(r"^\s*[-*•\d\.)\]]+\s*", "", line).strip()
 
+    _CODE_FENCE_LINE_RE = re.compile(r"^\s*```[a-zA-Z0-9_-]*\s*$")
+
+    def _clean_line(raw_line: str) -> str:
+        """Remove common markdown artifacts that break parsing.
+
+        The LLM sometimes emits trailing/standalone code fences (``` or ```json).
+        We keep the content but strip fence markers.
+        """
+        if raw_line is None:
+            return ""
+        line = str(raw_line).strip()
+
+        # Drop standalone fences entirely
+        if _CODE_FENCE_LINE_RE.match(line):
+            return ""
+
+        # Remove a trailing fence marker glued to the end of a line (e.g. "Paris ```")
+        line = re.sub(r"\s*`{3,}\s*$", "", line).strip()
+        return line
+
     q_prefixes = ("Q:", "Question:")
     a_prefixes = ("R:", "Réponse:", "Reponse:", "A:", "Answer:")
 
-    lines = [ln.strip() for ln in text.splitlines()]
+    # Best-effort pre-cleaning to prevent markdown artifacts from creating junk answers.
+    cleaned_text = re.sub(
+        r"^\s*```[a-zA-Z0-9_-]*\s*$",
+        "",
+        (text or ""),
+        flags=re.MULTILINE,
+    )
+    lines = [_clean_line(ln) for ln in cleaned_text.splitlines()]
 
     flashcards: List[Dict[str, str]] = []
     current_q: Optional[str] = None
@@ -49,7 +76,8 @@ def parse_qa_pairs(text: str) -> List[Dict[str, str]]:
     def _flush():
         nonlocal current_q, current_a_lines
         if current_q and current_a_lines:
-            answer = " ".join([x for x in current_a_lines if x]).strip()
+            answer = " ".join([_clean_line(x) for x in current_a_lines if x]).strip()
+            answer = re.sub(r"\s*`{3,}\s*$", "", answer).strip()
             if answer:
                 flashcards.append({"question": current_q.strip(), "answer": answer})
         current_q = None

@@ -51,3 +51,33 @@ def test_parse_qa_pairs_fallback_non_empty_when_unparseable():
     assert cards[0]["question"]
     assert cards[0]["answer"]
 
+
+def test_parse_qa_pairs_strips_standalone_code_fence_line_from_answer():
+    text = """Q: Capital of France?
+R: Paris
+```
+"""
+    cards = parse_qa_pairs(text)
+    assert len(cards) == 1
+    assert cards[0]["answer"].strip().lower() == "paris"
+
+
+def test_parse_qa_pairs_strips_trailing_code_fence_on_same_line():
+    text = "Q: Capital of France?\nR: Paris ```\n"
+    cards = parse_qa_pairs(text)
+    assert len(cards) == 1
+    assert cards[0]["answer"].strip().lower() == "paris"
+
+
+def test_parse_qa_pairs_strips_language_tagged_code_fence_lines():
+    text = """Q: Give JSON example
+R: {\"a\": 1}
+```json
+{\"a\": 1}
+```
+"""
+    cards = parse_qa_pairs(text)
+    assert len(cards) == 1
+    # We keep the content, but not the fences.
+    assert "```" not in cards[0]["answer"]
+
