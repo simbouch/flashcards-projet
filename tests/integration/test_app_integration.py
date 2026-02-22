@@ -328,11 +328,8 @@ def test_backend_service():
     assert deck is not None, f"No deck found for document {document_id}"
     print(f"✅ Found deck: {deck.get('title')} (ID: {deck.get('id')})")
 
-    # Verify that the deck has the correct title
-    if deck_title in deck.get('title'):
-        print(f"✅ Deck has the correct title: {deck.get('title')}")
-    else:
-        print(f"⚠️ Deck title does not match expected: {deck.get('title')} vs {deck_title}")
+    # Verify that the deck has the correct title (the upload form field `title` is the deck title)
+    assert deck.get("title") == deck_title, f"Deck title mismatch: got={deck.get('title')} expected={deck_title}"
 
     # Get flashcards
     response = requests.get(

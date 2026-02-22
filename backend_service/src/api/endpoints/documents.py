@@ -1,8 +1,8 @@
 """
 Document management endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
-from typing import Any, List
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks, Form
+from typing import Any, List, Optional
 from sqlalchemy.orm import Session
 import uuid
 import os
@@ -39,7 +39,8 @@ def _guess_mime_type_from_ext(file_ext: str) -> str:
 
 async def process_document(
     document_id: str,
-    file_path: Path
+    file_path: Path,
+    deck_title: Optional[str] = None,
 ):
     """
     Process a document: extract text with OCR and generate flashcards.
@@ -86,7 +87,7 @@ async def process_document(
 
         # Create a deck for the flashcards
         document = crud.get_document(db, document_id)
-        deck_name = f"Deck for {document.filename}"
+        deck_name = (deck_title or "").strip() or f"Deck for {document.filename}"
 
         deck_data = schemas.DeckCreate(
             title=deck_name,
@@ -124,6 +125,7 @@ async def process_document(
 async def create_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    title: Optional[str] = Form(None),
     current_user: models.User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ) -> Any:
@@ -190,7 +192,7 @@ async def create_document(
 
     # Process document in background
     background_tasks.add_task(
-        process_document, document.id, file_path
+        process_document, document.id, file_path, title
     )
 
     logger.info(f"Document created: {document.id}")
