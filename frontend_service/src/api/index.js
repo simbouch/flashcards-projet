@@ -108,9 +108,12 @@ export const documentsAPI = {
   getDocument(id) {
     return apiClient.get(`/documents/${id}`)
   },
-  uploadDocument(file) {
+  uploadDocument(file, title = null) {
     const formData = new FormData()
     formData.append('file', file)
+    if (title && String(title).trim()) {
+      formData.append('title', String(title).trim())
+    }
     return apiClient.post('/documents', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'

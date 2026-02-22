@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+﻿import { defineStore } from 'pinia'
 import { documentsAPI } from '../api'
 
 export const useDocumentsStore = defineStore('documents', {
@@ -49,12 +49,12 @@ export const useDocumentsStore = defineStore('documents', {
       }
     },
     
-    async uploadDocument(file) {
+    async uploadDocument(file, title = null) {
       this.loading = true
       this.error = null
       
       try {
-        const response = await documentsAPI.uploadDocument(file)
+        const response = await documentsAPI.uploadDocument(file, title)
         // Add the new document to the list
         this.documents.push(response.data)
         this.loading = false
@@ -104,3 +104,4 @@ export const useDocumentsStore = defineStore('documents', {
     }
   }
 })
+

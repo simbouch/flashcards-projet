@@ -161,6 +161,15 @@
             :rules="[v => !!v || 'Please select a file to upload']"
           ></v-file-input>
 
+          <v-text-field
+            v-model="deckTitle"
+            label="Deck title (optional)"
+            prepend-inner-icon="mdi-format-title"
+            variant="outlined"
+            clearable
+            class="mb-4"
+          ></v-text-field>
+
           <v-alert
             v-if="uploadError"
             type="error"
@@ -369,17 +378,18 @@ export default {
       showViewDialog: false,
       showDeleteDialog: false,
       fileToUpload: null,
+      deckTitle: '',
       uploading: false,
       uploadError: null,
       selectedDocument: null,
       activeTab: 0,
       extractedText: null,
       loadingText: false,
-        textError: null,
+      textError: null,
       flashcards: [],
       loadingFlashcards: false,
-        flashcardsError: null,
-        selectedDeckId: null,
+      flashcardsError: null,
+      selectedDeckId: null,
       deleting: false
     }
   },
@@ -387,6 +397,14 @@ export default {
     this.fetchDocuments()
   },
     watch: {
+      fileToUpload(newVal) {
+        // Best-effort: suggest a title based on filename (user can override)
+        const file = Array.isArray(newVal) ? newVal[0] : newVal
+        if (!file || this.deckTitle) return
+        const name = String(file.name || '').trim()
+        if (!name) return
+        this.deckTitle = name.replace(/\.[^/.]+$/, '')
+      },
       async activeTab(newVal) {
         // Only react when the modal is open and a document is selected
         if (!this.showViewDialog || !this.selectedDocument) return
@@ -462,9 +480,11 @@ export default {
       this.uploadError = null
 
       try {
-        await this.documentsStore.uploadDocument(this.fileToUpload)
+          const file = Array.isArray(this.fileToUpload) ? this.fileToUpload[0] : this.fileToUpload
+          await this.documentsStore.uploadDocument(file, this.deckTitle)
         this.showUploadDialog = false
         this.fileToUpload = null
+          this.deckTitle = ''
       } catch (error) {
         this.uploadError = error.message || 'Failed to upload document'
       } finally {
@@ -666,4 +686,6 @@ export default {
   50% { transform: scale(1.05); }
 }
 </style>
+
+
 
