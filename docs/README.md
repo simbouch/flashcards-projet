@@ -10,6 +10,16 @@ This folder contains the complete documentation of the database structure used i
 4. [LLM benchmarking](llm_benchmarking.md) - Methodology + commands + evidence locations
 5. [Admin & system user management](admin_system_users.md) - How the initial admin is bootstrapped + why `system` is reserved
 
+## RNCP (E2–E5) checklists & report scaffolds
+
+These are **short, practical checklists** that point to concrete evidence in this repository,
+plus a suggested report outline for each part.
+
+1. [RNCP E2](rncp_e2.md) - Build/deploy/operate (Docker, CI, monitoring)
+2. [RNCP E3](rncp_e3.md) - Testing & quality (unit/integration, lint, benchmarks)
+3. [RNCP E4](rncp_e4.md) - Project management (agile process + artifacts)
+4. [RNCP E5](rncp_e5.md) - Documentation & communication (user/tech docs)
+
 ## Viewing the Diagrams
 
 The diagrams are created using Mermaid syntax. To view them:
