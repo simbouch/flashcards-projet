@@ -46,7 +46,16 @@ services:
       - llm_models:/app/models
     environment:
       - PYTHONUNBUFFERED=1
-      - MODEL_NAME=bigscience/bloom-560m
+      # Allow overriding the model from the host env when benchmarking / comparing.
+      # Example (PowerShell):
+      #   $env:LLM_MODEL_NAME='Qwen/Qwen2.5-0.5B-Instruct'
+      #   docker compose up -d --force-recreate llm-service
+      - MODEL_NAME=${LLM_MODEL_NAME:-Qwen/Qwen2.5-0.5B-Instruct}
+      # Optional: reduce CPU memory footprint for larger models.
+      # Example (PowerShell):
+      #   $env:LLM_CPU_DTYPE='float16'
+      #   docker compose up -d --force-recreate llm-service
+      - LLM_CPU_DTYPE=${LLM_CPU_DTYPE:-float32}
       - REDIS_URL=redis://redis:6379
       - MLFLOW_TRACKING_URI=http://mlflow-llm:5001
       - MLFLOW_EXPERIMENT_NAME=llm_service_tracking
@@ -55,7 +64,9 @@ services:
       - mlflow-llm
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; print(urllib.request.urlopen('http://localhost:8001/health').read())\" || exit 1"]
+      # NOTE: use 127.0.0.1 (not localhost) to avoid IPv6 resolution issues that can
+      # manifest as: OSError: [Errno 99] Cannot assign requested address
+      test: ["CMD-SHELL", "python -c \"import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=5).read())\" || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

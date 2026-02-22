@@ -7,6 +7,7 @@ This folder contains the complete documentation of the database structure used i
 1. [Conceptual Data Model (CDM)](database_mcd.md) - Conceptual representation of entities and their relationships
 2. [Physical Data Model (PDM)](database_mpd.md) - Physical representation of tables and their constraints
 3. [Database Schema](database_schema.md) - Overview and class diagram of the database
+4. [LLM benchmarking](llm_benchmarking.md) - Methodology + commands + evidence locations
 
 ## Viewing the Diagrams
 

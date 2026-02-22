@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-02-21T01:25:48",
+  "model_name": "Qwen/Qwen2.5-0.5B-Instruct",
+  "device": "cpu",
+  "init_seconds": 375.612,
+  "num_cards": 5,
+  "runs": 1,
+  "warmup": 0,
+  "notes": "prompt+postprocess",
+  "cases": [
+    {
+      "name": "fr_short",
+      "text_len": 140,
+      "latency_seconds": [
+        41.688
+      ],
+      "latency_mean": 41.688,
+      "latency_p95": 41.688,
+      "card_metrics": {
+        "total": 5,
+        "valid": 5,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 5,
+        "avg_q_len": 36.8,
+        "avg_a_len": 90.8
+      }
+    },
+    {
+      "name": "fr_medium",
+      "text_len": 239,
+      "latency_seconds": [
+        110.023
+      ],
+      "latency_mean": 110.023,
+      "latency_p95": 110.023,
+      "card_metrics": {
+        "total": 1,
+        "valid": 1,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 1,
+        "avg_q_len": 35,
+        "avg_a_len": 286
+      }
+    },
+    {
+      "name": "ocr_noisy",
+      "text_len": 216,
+      "latency_seconds": [
+        54.312
+      ],
+      "latency_mean": 54.312,
+      "latency_p95": 54.312,
+      "card_metrics": {
+        "total": 5,
+        "valid": 5,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 5,
+        "avg_q_len": 81.8,
+        "avg_a_len": 143
+      }
+    }
+  ]
+}

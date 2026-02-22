@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-02-21T08:07:44",
+  "model_name": "EleutherAI/gpt-neo-125M",
+  "device": "cpu",
+  "init_seconds": 66.134,
+  "num_cards": 5,
+  "runs": 1,
+  "warmup": 0,
+  "notes": "baseline gpt-neo 125M",
+  "cases": [
+    {
+      "name": "fr_short",
+      "text_len": 140,
+      "latency_seconds": [
+        94.291
+      ],
+      "latency_mean": 94.291,
+      "latency_p95": 94.291,
+      "card_metrics": {
+        "total": 2,
+        "valid": 2,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 2,
+        "avg_q_len": 22.5,
+        "avg_a_len": 358.5
+      }
+    },
+    {
+      "name": "fr_medium",
+      "text_len": 239,
+      "latency_seconds": [
+        95.886
+      ],
+      "latency_mean": 95.886,
+      "latency_p95": 95.886,
+      "card_metrics": {
+        "total": 1,
+        "valid": 1,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 1,
+        "avg_q_len": 10,
+        "avg_a_len": 69
+      }
+    },
+    {
+      "name": "ocr_noisy",
+      "text_len": 216,
+      "latency_seconds": [
+        94.603
+      ],
+      "latency_mean": 94.603,
+      "latency_p95": 94.603,
+      "card_metrics": {
+        "total": 3,
+        "valid": 3,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 3,
+        "avg_q_len": 18.67,
+        "avg_a_len": 599.33
+      }
+    }
+  ]
+}

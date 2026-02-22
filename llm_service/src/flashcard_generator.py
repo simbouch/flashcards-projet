@@ -44,10 +44,8 @@ class FlashcardGenerator:
         with llm_tracker.track_generation_operation("flashcard_generation"):
             try:
                 # Log model metadata
-                llm_tracker.log_model_metadata(
-                    model_name=self.model.model_name,
-                    model_size="560M"  # For bloom-560m
-                )
+                # Don't hardcode model size (we benchmark multiple models).
+                llm_tracker.log_model_metadata(model_name=self.model.model_name, model_size=None)
 
                 # Generate flashcards using the LLM model
                 flashcards = self.model.generate_flashcards(text, num_cards)

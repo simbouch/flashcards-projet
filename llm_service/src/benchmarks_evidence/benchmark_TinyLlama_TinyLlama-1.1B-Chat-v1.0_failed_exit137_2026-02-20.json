@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-02-20T00:00:00",
+  "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  "device": "cpu",
+  "status": "failed",
+  "exit_code": 137,
+  "error": "Process killed (exit 137) during model loading; likely Out-Of-Memory (OOM) in Docker container.",
+  "command": "docker compose exec -T llm-service python -m src.benchmark_flashcards --model-name TinyLlama/TinyLlama-1.1B-Chat-v1.0 --runs 1 --warmup 0 --max-chars 1200 --evidence-dir /app/src/benchmarks_evidence",
+  "notes": "Observed kill at ~92% of model load (184/201 layers). By default, CPU loads use float32 weights, which can exceed container memory for ~1.1B parameter models. Evidence file is committed to keep traceability of tested candidates and encountered constraints.",
+  "next_actions": [
+    "Increase Docker Desktop/compose memory available to llm-service and retry.",
+    "Try reduced CPU dtype by setting LLM_CPU_DTYPE=float16 (or bfloat16) and retry (may not work on all CPUs).",
+    "If still blocked, benchmark smaller models or quantized variants (would require extra deps such as bitsandbytes)."
+  ]
+}
+

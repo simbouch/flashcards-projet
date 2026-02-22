@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-02-21T05:07:03",
+  "model_name": "distilgpt2",
+  "device": "cpu",
+  "init_seconds": 196.06,
+  "num_cards": 5,
+  "runs": 1,
+  "warmup": 0,
+  "notes": "baseline tiny GPT2",
+  "cases": [
+    {
+      "name": "fr_short",
+      "text_len": 140,
+      "latency_seconds": [
+        4.274
+      ],
+      "latency_mean": 4.274,
+      "latency_p95": 4.274,
+      "card_metrics": {
+        "total": 1,
+        "valid": 1,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 1,
+        "avg_q_len": 35,
+        "avg_a_len": 19
+      }
+    },
+    {
+      "name": "fr_medium",
+      "text_len": 239,
+      "latency_seconds": [
+        19.436
+      ],
+      "latency_mean": 19.436,
+      "latency_p95": 19.436,
+      "card_metrics": {
+        "total": 1,
+        "valid": 1,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 1,
+        "avg_q_len": 35,
+        "avg_a_len": 601
+      }
+    },
+    {
+      "name": "ocr_noisy",
+      "text_len": 216,
+      "latency_seconds": [
+        17.644
+      ],
+      "latency_mean": 17.644,
+      "latency_p95": 17.644,
+      "card_metrics": {
+        "total": 1,
+        "valid": 1,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 1,
+        "avg_q_len": 35,
+        "avg_a_len": 510
+      }
+    }
+  ]
+}

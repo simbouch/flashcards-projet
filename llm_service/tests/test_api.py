@@ -19,7 +19,9 @@ def test_health_check(client, mock_flashcard_generator):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
-    assert "healthy" in data["message"]
+    assert "alive" in data["message"].lower()
+    assert "model" in data
+    assert set(data["model"].keys()) >= {"loaded", "initializing", "last_init_error"}
 
 def test_generate_flashcards(client, mock_flashcard_generator):
     """Test the generate flashcards endpoint."""

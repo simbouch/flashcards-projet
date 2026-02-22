@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-02-21T03:54:36",
+  "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  "device": "cpu",
+  "init_seconds": 1274.859,
+  "num_cards": 5,
+  "runs": 1,
+  "warmup": 0,
+  "notes": "after disabling nltk.download",
+  "cases": [
+    {
+      "name": "fr_short",
+      "text_len": 140,
+      "latency_seconds": [
+        222.761
+      ],
+      "latency_mean": 222.761,
+      "latency_p95": 222.761,
+      "card_metrics": {
+        "total": 1,
+        "valid": 1,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 1,
+        "avg_q_len": 35,
+        "avg_a_len": 499
+      }
+    },
+    {
+      "name": "fr_medium",
+      "text_len": 239,
+      "latency_seconds": [
+        346.953
+      ],
+      "latency_mean": 346.953,
+      "latency_p95": 346.953,
+      "card_metrics": {
+        "total": 1,
+        "valid": 1,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 1,
+        "avg_q_len": 35,
+        "avg_a_len": 601
+      }
+    },
+    {
+      "name": "ocr_noisy",
+      "text_len": 216,
+      "latency_seconds": [
+        363.738
+      ],
+      "latency_mean": 363.738,
+      "latency_p95": 363.738,
+      "card_metrics": {
+        "total": 1,
+        "valid": 1,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 1,
+        "avg_q_len": 35,
+        "avg_a_len": 601
+      }
+    }
+  ]
+}

@@ -12,31 +12,10 @@ from nltk.tokenize import sent_tokenize
 import time
 import zipfile
 
-def _ensure_nltk_punkt() -> None:
-    """Best-effort ensure sentence tokenization data is available.
-
-    NLTK's `sent_tokenize` relies on the `punkt` resource.
-    """
-    # NLTK can sometimes end up with a corrupted punkt zip (partial download),
-    # which raises zipfile.BadZipFile on `nltk.data.find()`.
-    # This function must never crash import-time; we fallback later if needed.
-    try:
-        nltk.data.find("tokenizers/punkt")
-        return
-    except (LookupError, zipfile.BadZipFile, OSError) as e:
-        logger.warning(
-            f"NLTK punkt not usable ({type(e).__name__}: {e}); attempting download"
-        )
-    except Exception as e:
-        logger.warning(
-            f"Unexpected error while checking NLTK punkt ({type(e).__name__}: {e}); attempting download"
-        )
-
-    try:
-        # quiet=True to reduce container logs
-        nltk.download("punkt", quiet=True)
-    except Exception as e:
-        logger.warning(f"Failed to download NLTK punkt data: {type(e).__name__}: {e}")
+# NOTE: We intentionally do *not* call `nltk.download()` at runtime.
+# In Docker/CI environments this can hang (network/DNS restrictions) and makes
+# benchmarks non-deterministic. We already handle missing/corrupted punkt in the
+# `sent_tokenize` call-site by falling back to `_fallback_sentence_split`.
 
 
 def _fallback_sentence_split(text: str) -> List[str]:
@@ -138,9 +117,6 @@ def parse_qa_pairs(text: str) -> List[Dict[str, str]]:
     return [{"question": "Carte générée (format non standard)", "answer": excerpt}]
 
 
-# Download NLTK data for sentence tokenization (best-effort)
-_ensure_nltk_punkt()
-
 class LLMModel:
     """
     Interface for the language model used to generate flashcards.
@@ -167,6 +143,89 @@ class LLMModel:
         self.generator = None
         self._load_model()
 
+    @staticmethod
+    def _normalize_question(q: str) -> str:
+        return " ".join((q or "").strip().lower().split())
+
+    @classmethod
+    def _postprocess_cards(cls, cards: List[Dict[str, Any]], *, limit: int) -> List[Dict[str, str]]:
+        """Filter + de-duplicate cards and cap to `limit`.
+
+        This makes outputs comparable across models (some models over-generate or repeat).
+        """
+        out: List[Dict[str, str]] = []
+        seen: set[str] = set()
+
+        for c in cards or []:
+            q = str((c or {}).get("question", "") or "").strip()
+            a = str((c or {}).get("answer", "") or "").strip()
+
+            # Keep thresholds aligned with benchmark validity heuristics.
+            if len(q) < 5 or len(a) < 3:
+                continue
+
+            key = cls._normalize_question(q)
+            if not key or key in seen:
+                continue
+
+            seen.add(key)
+            out.append({"question": q, "answer": a})
+
+            if limit and len(out) >= int(limit):
+                break
+
+        # If everything got filtered out, keep at least one non-empty card if present.
+        if not out:
+            for c in cards or []:
+                q = str((c or {}).get("question", "") or "").strip()
+                a = str((c or {}).get("answer", "") or "").strip()
+                if q and a:
+                    return [{"question": q, "answer": a}]
+
+        return out
+
+    def _build_prompt(self, *, chunk: str, num_cards: int, avoid_questions: Optional[List[str]] = None) -> str:
+        """Build a prompt. Uses chat templates when available (instruct/chat models)."""
+        avoid_questions = avoid_questions or []
+        avoid_block = ""
+        if avoid_questions:
+            avoid_qs = "\n".join(f"- {q}" for q in avoid_questions[:12] if str(q).strip())
+            if avoid_qs.strip():
+                avoid_block = (
+                    "\n\nÉvite de répéter ces questions déjà proposées :\n" + avoid_qs + "\n"
+                )
+
+        user_content = (
+            f"TEXTE:\n{chunk}\n\n"
+            f"Génère exactement {int(num_cards)} cartes mémoire (question/réponse) basées sur le TEXTE."
+            "\nRéponds uniquement avec les cartes, sans titre, sans explication."
+            "\nFormat STRICT (une carte = 2 lignes) :"
+            "\nQ: <question>"
+            "\nR: <réponse>"
+            "\nContraintes : questions courtes et distinctes; réponses factuelles."
+            + avoid_block
+        )
+
+        # Prefer chat templates when the tokenizer supports it.
+        try:
+            if getattr(self.tokenizer, "apply_chat_template", None) and getattr(self.tokenizer, "chat_template", None):
+                messages = [
+                    {
+                        "role": "system",
+                        "content": "Tu es un assistant pédagogique. Tu produis des cartes mémoire utiles et non répétitives.",
+                    },
+                    {"role": "user", "content": user_content},
+                ]
+                return self.tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                )
+        except Exception as e:
+            logger.debug(f"Chat template not used ({type(e).__name__}: {e}); falling back to plain prompt")
+
+        return user_content
+
     def _load_model(self):
         """Load the model and tokenizer."""
         try:
@@ -176,9 +235,20 @@ class LLMModel:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
             # Load model with appropriate configuration for memory efficiency
+            cpu_dtype_name = os.getenv("LLM_CPU_DTYPE", "float32").strip().lower()
+            cpu_dtype_map = {
+                "float32": torch.float32,
+                "fp32": torch.float32,
+                "float16": torch.float16,
+                "fp16": torch.float16,
+                "bfloat16": torch.bfloat16,
+                "bf16": torch.bfloat16,
+            }
+            cpu_dtype = cpu_dtype_map.get(cpu_dtype_name, torch.float32)
+
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                torch_dtype=torch.float16 if self.device == "cuda" else cpu_dtype,
                 low_cpu_mem_usage=True,
                 device_map="auto" if self.device == "cuda" else None
             )
@@ -285,8 +355,9 @@ class LLMModel:
             chunk_cards = self._generate_from_chunk(chunk, cards_to_generate)
             all_flashcards.extend(chunk_cards)
 
-        logger.info(f"Generated {len(all_flashcards)} flashcards")
-        return all_flashcards
+        final_cards = self._postprocess_cards(all_flashcards, limit=int(num_cards))
+        logger.info(f"Generated {len(final_cards)} flashcards (requested={num_cards}, raw={len(all_flashcards)})")
+        return final_cards
 
     def _generate_from_chunk(self, chunk: str, num_cards: int) -> List[Dict[str, str]]:
         """
@@ -299,38 +370,46 @@ class LLMModel:
         Returns:
             List of flashcard dictionaries.
         """
-        # Construct a prompt for the model
-        prompt = f"""
-        Texte: {chunk}
-
-        Génère {num_cards} cartes mémoire (question/réponse) basées sur le texte ci-dessus.
-        Format:
-        Q: [Question]
-        R: [Réponse]
-        """
-
         try:
-            # Generate text
+            # Some small models under-generate or repeat. We do a small bounded retry loop
+            # to try to reach the requested count, then we cap/dedupe.
+            max_attempts = int(os.getenv("LLM_CHUNK_GEN_ATTEMPTS", "3"))
+            collected: List[Dict[str, Any]] = []
+
             # Bound the amount of generation; using max_length based on prompt size can
             # result in very long generations (and timeouts) on CPU.
             gen_kwargs = {
                 "max_new_tokens": min(128 * max(1, int(num_cards)), 512),
                 "num_return_sequences": 1,
-                "temperature": 0.7,
-                "top_p": 0.9,
+                "temperature": float(os.getenv("LLM_TEMPERATURE", "0.7")),
+                "top_p": float(os.getenv("LLM_TOP_P", "0.9")),
                 "do_sample": True,
+                "repetition_penalty": float(os.getenv("LLM_REPETITION_PENALTY", "1.15")),
                 "return_full_text": False,
             }
             eos_id = getattr(self.tokenizer, "eos_token_id", None)
             if eos_id is not None:
                 gen_kwargs["eos_token_id"] = eos_id
+                if getattr(self.tokenizer, "pad_token_id", None) is None:
+                    gen_kwargs["pad_token_id"] = eos_id
 
-            outputs = self.generator(prompt, **gen_kwargs)
+            for attempt in range(max(1, max_attempts)):
+                remaining = int(num_cards) - len(self._postprocess_cards(collected, limit=int(num_cards)))
+                if remaining <= 0:
+                    break
 
-            generated_text = outputs[0]['generated_text']
+                avoid_qs = [c.get("question", "") for c in self._postprocess_cards(collected, limit=int(num_cards))]
+                prompt = self._build_prompt(chunk=chunk, num_cards=remaining, avoid_questions=avoid_qs)
 
-            # Extract Q/A pairs from the generated text
-            return parse_qa_pairs(generated_text)
+                # Slightly increase randomness on retries to escape repetition.
+                if attempt >= 1:
+                    gen_kwargs["temperature"] = min(1.0, float(gen_kwargs["temperature"]) + 0.2)
+
+                outputs = self.generator(prompt, **gen_kwargs)
+                generated_text = outputs[0]["generated_text"]
+                collected.extend(parse_qa_pairs(generated_text))
+
+            return self._postprocess_cards(collected, limit=int(num_cards))
 
         except Exception as e:
             logger.exception(f"Error generating flashcards: {e}")

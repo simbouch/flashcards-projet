@@ -1,6 +1,8 @@
 """
 FastAPI application for the LLM service.
 """
+import asyncio
+
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -157,7 +159,82 @@ app.add_middleware(
 )
 
 # Initialize flashcard generator and monitoring components
-generator = None
+# NOTE: Model initialization can be very slow (download + load). We must not
+# block the FastAPI startup event, otherwise Uvicorn won't accept connections
+# and callers may see RemoteDisconnected/connection errors.
+generator: Optional[FlashcardGenerator] = None
+_generator_init_task: Optional[asyncio.Task] = None
+_generator_init_lock: Optional[asyncio.Lock] = None
+_generator_last_init_error: Optional[str] = None
+
+
+def _record_init_task_result(task: asyncio.Task) -> None:
+    """Record background init task outcome for health endpoints."""
+
+    global generator, _generator_last_init_error
+    try:
+        gen = task.result()
+    except Exception as e:  # noqa: BLE001 (background task result)
+        _generator_last_init_error = f"{type(e).__name__}: {e}"
+        return
+    if generator is None:
+        generator = gen
+    _generator_last_init_error = None
+
+
+async def _ensure_generator_initialized() -> FlashcardGenerator:
+    """Ensure the global FlashcardGenerator is initialized.
+
+    - Non-blocking startup: initialization can be scheduled on startup.
+    - First request to /generate will await initialization if still running.
+    - Safe for concurrent requests (single initialization task).
+    """
+
+    global generator, _generator_init_task, _generator_init_lock, _generator_last_init_error
+
+    if generator is not None:
+        return generator
+
+    if _generator_init_lock is None:
+        # Lazily create the lock in the running event loop.
+        _generator_init_lock = asyncio.Lock()
+
+    # Create/reuse a single init task.
+    async with _generator_init_lock:
+        if generator is not None:
+            return generator
+
+        if _generator_init_task is None:
+            _generator_last_init_error = None
+            _generator_init_task = asyncio.create_task(asyncio.to_thread(FlashcardGenerator))
+            _generator_init_task.add_done_callback(_record_init_task_result)
+
+        task = _generator_init_task
+
+    try:
+        gen = await task
+    except Exception as e:
+        _generator_last_init_error = f"{type(e).__name__}: {e}"
+        # Allow retry on next call.
+        async with _generator_init_lock:
+            if _generator_init_task is task:
+                _generator_init_task = None
+        raise
+
+    generator = gen
+    _generator_last_init_error = None
+    return generator
+
+
+def _generator_status() -> Dict[str, Any]:
+    """Small status payload for health/readiness endpoints."""
+
+    initializing = _generator_init_task is not None and not _generator_init_task.done()
+    return {
+        "loaded": generator is not None,
+        "initializing": initializing,
+        "last_init_error": _generator_last_init_error,
+    }
 model_evaluator = ModelEvaluator()
 data_collector = DataCollector()
 
@@ -207,15 +284,26 @@ class FeedbackRequest(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize resources on startup."""
-    global generator
+    """Initialize resources on startup (non-blocking)."""
+    global _generator_init_lock, _generator_init_task
+
+    logger.info("Starting LLM service (non-blocking startup)")
+    _generator_init_lock = asyncio.Lock()
+
+    warmup = os.getenv("LLM_WARMUP_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
+    if not warmup:
+        logger.info("LLM warmup on startup disabled (LLM_WARMUP_ON_STARTUP=false)")
+        return
+
+    # Schedule model load in the background so the HTTP server becomes reachable quickly.
     try:
-        logger.info("Initializing LLM service")
-        generator = FlashcardGenerator()
-        logger.info("LLM service initialized successfully")
+        async with _generator_init_lock:
+            if generator is None and _generator_init_task is None:
+                _generator_init_task = asyncio.create_task(asyncio.to_thread(FlashcardGenerator))
+                _generator_init_task.add_done_callback(_record_init_task_result)
+        logger.info("LLM warmup task scheduled")
     except Exception as e:
-        logger.exception(f"Failed to initialize LLM service: {e}")
-        # We'll initialize the generator on the first request if it fails here
+        logger.exception(f"Failed to schedule LLM warmup task: {type(e).__name__}: {e}")
 
 @app.get("/")
 async def root():
@@ -224,19 +312,34 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
-    global generator
+    """Liveness health check endpoint.
 
-    # Check if generator is initialized
-    if generator is None:
-        try:
-            generator = FlashcardGenerator()
-            return {"status": "ok", "message": "LLM service is healthy (initialized on demand)"}
-        except Exception as e:
-            logger.exception(f"Health check failed: {e}")
-            return {"status": "error", "message": f"LLM service initialization failed: {str(e)}"}
+    This must stay fast and should NOT trigger model loading.
+    """
 
-    return {"status": "ok", "message": "LLM service is healthy"}
+    return {
+        "status": "ok",
+        "message": "LLM service is alive",
+        "model": _generator_status(),
+    }
+
+
+@app.get("/ready")
+async def ready_check():
+    """Readiness endpoint.
+
+    Returns 200 only when the model is loaded and ready to serve generations.
+    """
+
+    if generator is not None:
+        return {"status": "ok", "message": "LLM model is ready", "model": _generator_status()}
+
+    payload = {"status": "starting", "message": "LLM model is not ready", "model": _generator_status()}
+    # If we already have an init error, report it as error (still 503).
+    if _generator_last_init_error:
+        payload["status"] = "error"
+        payload["message"] = "LLM model failed to initialize"
+    return JSONResponse(status_code=503, content=payload)
 
 @app.post("/generate", response_model=GenerationResponse)
 @limiter.limit("5/minute")  # Very strict limit for AI generation
@@ -255,14 +358,13 @@ async def generate_flashcards(request: Request, generation_request: TextGenerati
     llm_active_generations.inc()
 
     try:
-        # Initialize generator if not already done
-        if generator is None:
-            try:
-                generator = FlashcardGenerator()
-            except Exception as e:
-                logger.exception(f"Failed to initialize generator: {e}")
-                llm_generation_errors.labels(error_type="initialization").inc()
-                raise HTTPException(status_code=500, detail=f"Failed to initialize LLM service: {str(e)}")
+        # Ensure generator is initialized (await background warmup if needed)
+        try:
+            generator = await _ensure_generator_initialized()
+        except Exception as e:
+            logger.exception(f"Failed to initialize generator: {type(e).__name__}: {e}")
+            llm_generation_errors.labels(error_type="initialization").inc()
+            raise HTTPException(status_code=500, detail=f"Failed to initialize LLM service: {str(e)}")
 
         # Generate flashcards
         llm_generation_requests_total.labels(request_type="text", status="started").inc()
@@ -321,12 +423,12 @@ async def generate_flashcards_from_chunks(request: Request, chunks_request: Chun
     """
     global generator
 
-    # Initialize generator if not already done
+    # Ensure generator is initialized (await background warmup if needed)
     if generator is None:
         try:
-            generator = FlashcardGenerator()
+            generator = await _ensure_generator_initialized()
         except Exception as e:
-            logger.exception(f"Failed to initialize generator: {e}")
+            logger.exception(f"Failed to initialize generator: {type(e).__name__}: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to initialize LLM service: {str(e)}")
 
     # Basic monitoring

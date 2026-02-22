@@ -68,6 +68,9 @@ logs/
 */logs/
 **/logs/
 
+# Local benchmark outputs (generated files)
+llm_service/src/_benchmarks/
+
 # Uploads directory - exclude everything except README
 uploads/*
 !uploads/README.md

@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-02-21T01:09:46",
+  "model_name": "bigscience/bloom-560m",
+  "device": "cpu",
+  "init_seconds": 13.087,
+  "num_cards": 5,
+  "runs": 1,
+  "warmup": 0,
+  "notes": "prompt+chat_template+postprocess",
+  "cases": [
+    {
+      "name": "fr_short",
+      "text_len": 140,
+      "latency_seconds": [
+        159.37
+      ],
+      "latency_mean": 159.37,
+      "latency_p95": 159.37,
+      "card_metrics": {
+        "total": 1,
+        "valid": 1,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 1,
+        "avg_q_len": 35,
+        "avg_a_len": 601
+      }
+    },
+    {
+      "name": "fr_medium",
+      "text_len": 239,
+      "latency_seconds": [
+        105.733
+      ],
+      "latency_mean": 105.733,
+      "latency_p95": 105.733,
+      "card_metrics": {
+        "total": 2,
+        "valid": 2,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 2,
+        "avg_q_len": 67,
+        "avg_a_len": 527
+      }
+    },
+    {
+      "name": "ocr_noisy",
+      "text_len": 216,
+      "latency_seconds": [
+        102.838
+      ],
+      "latency_mean": 102.838,
+      "latency_p95": 102.838,
+      "card_metrics": {
+        "total": 1,
+        "valid": 1,
+        "empty_q": 0,
+        "empty_a": 0,
+        "unique_questions": 1,
+        "avg_q_len": 35,
+        "avg_a_len": 601
+      }
+    }
+  ]
+}
