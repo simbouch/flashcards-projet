@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="admin-view">
     <v-container class="py-8">
       <div class="text-center mb-8 animate-fade-in">
@@ -59,9 +59,9 @@
                 </template>
                 <template #[`item.actions`]="{ item }">
                   <div class="d-flex gap-2">
-	                    <v-btn class="modern-btn" size="small" color="primary" prepend-icon="mdi-pencil" :disabled="isSystem(item)" @click="openEdit(item)">Edit</v-btn>
-	                    <v-btn class="modern-btn" size="small" variant="outlined" prepend-icon="mdi-lock-reset" :disabled="isSystem(item)" @click="openReset(item)">Reset</v-btn>
-	                    <v-btn class="modern-btn" size="small" color="error" variant="outlined" icon="mdi-delete" :disabled="isSelf(item) || isSystem(item)" @click="openDelete(item)"></v-btn>
+                      <v-btn class="modern-btn" size="small" color="primary" prepend-icon="mdi-pencil" :disabled="isSystem(item)" @click="openEdit(item)">Edit</v-btn>
+                      <v-btn class="modern-btn" size="small" variant="outlined" prepend-icon="mdi-lock-reset" :disabled="isSystem(item)" @click="openReset(item)">Reset</v-btn>
+                      <v-btn class="modern-btn" size="small" color="error" variant="outlined" icon="mdi-delete" :disabled="isSelf(item) || isSystem(item)" @click="openDelete(item)"></v-btn>
                   </div>
                 </template>
               </v-data-table>
@@ -74,15 +74,15 @@
         <v-card class="modern-card">
           <v-card-title class="pa-6 pb-4"><h3 class="text-h6 font-weight-bold">Edit user: {{ editForm.username }}</h3></v-card-title>
           <v-card-text class="pa-6 pt-0">
-	            <v-text-field v-model="editForm.email" label="Email" type="email" variant="outlined" class="mb-3" :disabled="isSystem(editForm)" />
-	            <v-text-field v-model="editForm.full_name" label="Full name" variant="outlined" class="mb-3" :disabled="isSystem(editForm)" />
-	            <v-select v-model="editForm.role" :items="['user','admin']" label="Role" variant="outlined" class="mb-3" :disabled="isSelf(editForm) || isSystem(editForm)" />
-	            <v-switch v-model="editForm.is_active" label="Active" color="primary" :disabled="isSelf(editForm) || isSystem(editForm)" />
+              <v-text-field v-model="editForm.email" label="Email" type="email" variant="outlined" class="mb-3" :disabled="isSystem(editForm)" />
+              <v-text-field v-model="editForm.full_name" label="Full name" variant="outlined" class="mb-3" :disabled="isSystem(editForm)" />
+              <v-select v-model="editForm.role" :items="['user','admin']" label="Role" variant="outlined" class="mb-3" :disabled="isSelf(editForm) || isSystem(editForm)" />
+              <v-switch v-model="editForm.is_active" label="Active" color="primary" :disabled="isSelf(editForm) || isSystem(editForm)" />
           </v-card-text>
           <v-card-actions class="pa-6 pt-0">
             <v-spacer />
             <v-btn class="modern-btn" variant="outlined" @click="showEditDialog=false">Cancel</v-btn>
-	            <v-btn class="modern-btn ml-2" color="primary" :loading="saving" prepend-icon="mdi-content-save" :disabled="isSystem(editForm)" @click="saveEdit">Save</v-btn>
+              <v-btn class="modern-btn ml-2" color="primary" :loading="saving" prepend-icon="mdi-content-save" :disabled="isSystem(editForm)" @click="saveEdit">Save</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -97,7 +97,7 @@
           <v-card-actions class="pa-6 pt-0">
             <v-spacer />
             <v-btn class="modern-btn" variant="outlined" @click="showResetDialog=false">Cancel</v-btn>
-	            <v-btn class="modern-btn ml-2" color="primary" :loading="saving" prepend-icon="mdi-lock-reset" :disabled="!resetPassword || isSystem(resetUser)" @click="confirmReset">Reset</v-btn>
+              <v-btn class="modern-btn ml-2" color="primary" :loading="saving" prepend-icon="mdi-lock-reset" :disabled="!resetPassword || isSystem(resetUser)" @click="confirmReset">Reset</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -111,7 +111,7 @@
           <v-card-actions class="pa-6 pt-0">
             <v-spacer />
             <v-btn class="modern-btn" variant="outlined" @click="showDeleteDialog=false">Cancel</v-btn>
-	            <v-btn class="modern-btn ml-2" color="error" :loading="saving" :disabled="isSystem(deleteUser)" @click="confirmDelete">Delete</v-btn>
+              <v-btn class="modern-btn ml-2" color="error" :loading="saving" :disabled="isSystem(deleteUser)" @click="confirmDelete">Delete</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -166,9 +166,9 @@ export default {
     await this.loadAll()
   },
   methods: {
-	    isSystem(user) {
-	      return !!user && (user.username || '').toLowerCase() === 'system'
-	    },
+      isSystem(user) {
+        return !!user && (user.username || '').toLowerCase() === 'system'
+      },
     isSelf(user) {
       const me = this.authStore.currentUser
       return !!me && !!user && me.id === user.id
@@ -205,10 +205,10 @@ export default {
       }
     },
     openEdit(user) {
-	      if (this.isSystem(user)) {
-	        this.errorMessage = 'System user cannot be modified'
-	        return
-	      }
+        if (this.isSystem(user)) {
+          this.errorMessage = 'System user cannot be modified'
+          return
+        }
       this.editForm = { ...user }
       this.showEditDialog = true
     },
@@ -233,20 +233,20 @@ export default {
       }
     },
     openReset(user) {
-	      if (this.isSystem(user)) {
-	        this.errorMessage = 'System user password cannot be reset'
-	        return
-	      }
+        if (this.isSystem(user)) {
+          this.errorMessage = 'System user password cannot be reset'
+          return
+        }
       this.resetUser = user
       this.resetPassword = ''
       this.showResetDialog = true
     },
     async confirmReset() {
       if (!this.resetUser) return
-	      if (this.isSystem(this.resetUser)) {
-	        this.errorMessage = 'System user password cannot be reset'
-	        return
-	      }
+        if (this.isSystem(this.resetUser)) {
+          this.errorMessage = 'System user password cannot be reset'
+          return
+        }
       this.saving = true
       this.errorMessage = ''
       try {
@@ -260,19 +260,19 @@ export default {
       }
     },
     openDelete(user) {
-	      if (this.isSystem(user)) {
-	        this.errorMessage = 'System user cannot be deleted'
-	        return
-	      }
+        if (this.isSystem(user)) {
+          this.errorMessage = 'System user cannot be deleted'
+          return
+        }
       this.deleteUser = user
       this.showDeleteDialog = true
     },
     async confirmDelete() {
       if (!this.deleteUser) return
-	      if (this.isSystem(this.deleteUser)) {
-	        this.errorMessage = 'System user cannot be deleted'
-	        return
-	      }
+        if (this.isSystem(this.deleteUser)) {
+          this.errorMessage = 'System user cannot be deleted'
+          return
+        }
       this.saving = true
       this.errorMessage = ''
       try {
@@ -305,4 +305,5 @@ export default {
   background: rgba(59, 130, 246, 0.04);
 }
 </style>
+
 

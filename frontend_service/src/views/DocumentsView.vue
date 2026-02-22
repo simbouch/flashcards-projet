@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="documents-view">
     <v-container class="py-8">
       <!-- Page Header -->
@@ -269,7 +269,7 @@
                   indeterminate
                   color="primary"
                 ></v-progress-circular>
-                <p v-else>No text extracted yet.</p>
+                  <p v-else>{{ textError || 'No text extracted yet.' }}</p>
               </div>
             </v-tab-item>
 
@@ -291,7 +291,7 @@
                   indeterminate
                   color="primary"
                 ></v-progress-circular>
-                <p v-else>No flashcards generated yet.</p>
+                  <p v-else>{{ flashcardsError || 'No flashcards generated yet.' }}</p>
               </div>
             </v-tab-item>
           </v-tabs-items>
@@ -351,7 +351,7 @@
 <script>
 import { useDocumentsStore } from '../store/documents'
 import { useFlashcardsStore } from '../store/flashcards'
-import { documentsAPI } from '../api'
+import { documentsAPI, decksAPI } from '../api'
 
 export default {
   name: 'DocumentsView',
@@ -375,14 +375,33 @@ export default {
       activeTab: 0,
       extractedText: null,
       loadingText: false,
+        textError: null,
       flashcards: [],
       loadingFlashcards: false,
+        flashcardsError: null,
+        selectedDeckId: null,
       deleting: false
     }
   },
   created() {
     this.fetchDocuments()
   },
+    watch: {
+      async activeTab(newVal) {
+        // Only react when the modal is open and a document is selected
+        if (!this.showViewDialog || !this.selectedDocument) return
+
+        // Support both numeric and string tab values (Vuetify 3 can use custom values)
+        const tab = typeof newVal === 'string' ? Number(newVal) : newVal
+
+        if (tab === 1 && !this.extractedText && !this.loadingText) {
+          await this.fetchExtractedText()
+        }
+        if (tab === 2 && (!this.flashcards || this.flashcards.length === 0) && !this.loadingFlashcards) {
+          await this.fetchFlashcards()
+        }
+      }
+    },
   methods: {
     async fetchDocuments() {
       await this.documentsStore.fetchDocuments()
@@ -458,28 +477,30 @@ export default {
       this.showViewDialog = true
       this.activeTab = 0
       this.extractedText = null
+        this.textError = null
       this.flashcards = []
+        this.flashcardsError = null
+        this.selectedDeckId = null
 
-      // Fetch extracted text when tab is changed to text
-      this.$watch('activeTab', async (newVal) => {
-        if (newVal === 1 && !this.extractedText) {
-          await this.fetchExtractedText()
-        } else if (newVal === 2 && this.flashcards.length === 0) {
-          await this.fetchFlashcards()
-        }
-      })
+        // Prefetch in background so the user doesn't see misleading "No ... yet" messages
+        // (View button is only enabled when processing is complete/error)
+        this.fetchExtractedText()
+        this.fetchFlashcards()
     },
 
     async fetchExtractedText() {
       if (!this.selectedDocument) return
 
       this.loadingText = true
+        this.textError = null
 
       try {
         const response = await documentsAPI.getDocumentText(this.selectedDocument.id)
         this.extractedText = response.data
       } catch (error) {
-        console.error('Failed to fetch extracted text:', error)
+          console.error('Failed to fetch extracted text:', error)
+          this.extractedText = null
+          this.textError = error.response?.data?.detail || 'Failed to load extracted text'
       } finally {
         this.loadingText = false
       }
@@ -489,19 +510,36 @@ export default {
       if (!this.selectedDocument) return
 
       this.loadingFlashcards = true
+        this.flashcardsError = null
 
-      try {
-        // Find decks associated with this document
-        const decksResponse = await this.documentsStore.fetchDocument(this.selectedDocument.id)
-        if (decksResponse && decksResponse.decks && decksResponse.decks.length > 0) {
-          // Get flashcards for the first deck
-          const deckId = decksResponse.decks[0].id
+        try {
+          // Backend Document response does NOT include decks; fetch decks list and filter by document_id.
+          const decksResponse = await decksAPI.getDecks()
+          const allDecks = decksResponse?.data || []
+          const decksForDoc = allDecks.filter(d => d.document_id === this.selectedDocument.id)
+
+          if (!decksForDoc.length) {
+            this.selectedDeckId = null
+            this.flashcards = []
+            return
+          }
+
+          // Pick the most recent deck for this document (fallback: first)
+          const sorted = [...decksForDoc].sort((a, b) => {
+            const da = new Date(a.created_at || 0).getTime()
+            const db = new Date(b.created_at || 0).getTime()
+            return db - da
+          })
+          const deckId = sorted[0].id
+          this.selectedDeckId = deckId
+
           const flashcardsResponse = await this.flashcardsStore.fetchFlashcards(deckId)
           this.flashcards = flashcardsResponse || []
-        }
-      } catch (error) {
-        console.error('Failed to fetch flashcards:', error)
-      } finally {
+        } catch (error) {
+          console.error('Failed to fetch flashcards:', error)
+          this.flashcards = []
+          this.flashcardsError = error.response?.data?.detail || 'Failed to load flashcards'
+        } finally {
         this.loadingFlashcards = false
       }
     },
@@ -628,3 +666,4 @@ export default {
   50% { transform: scale(1.05); }
 }
 </style>
+

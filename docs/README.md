@@ -8,6 +8,7 @@ This folder contains the complete documentation of the database structure used i
 2. [Physical Data Model (PDM)](database_mpd.md) - Physical representation of tables and their constraints
 3. [Database Schema](database_schema.md) - Overview and class diagram of the database
 4. [LLM benchmarking](llm_benchmarking.md) - Methodology + commands + evidence locations
+5. [Admin & system user management](admin_system_users.md) - How the initial admin is bootstrapped + why `system` is reserved
 
 ## Viewing the Diagrams
 
