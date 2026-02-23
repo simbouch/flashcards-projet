@@ -107,7 +107,8 @@
 
                   <!-- Card Content -->
                   <v-card-text class="pa-6">
-                    <h3 class="text-h6 font-weight-bold mb-3 text-white">{{ deck.title }}</h3>
+                    <!-- Title was previously forced to white, which became unreadable on the light card body -->
+                    <h3 class="text-h6 font-weight-bold mb-3 text-high-emphasis">{{ deck.title }}</h3>
                     <p v-if="deck.description" class="text-body-2 text-medium-emphasis mb-4 line-clamp-2">
                       {{ deck.description }}
                     </p>

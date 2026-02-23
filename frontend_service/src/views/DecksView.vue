@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="decks">
     <v-container class="py-8">
       <!-- Header Section -->
@@ -105,7 +105,12 @@
                       <div class="card-gradient-overlay"></div>
                       <v-card-title class="pa-4 pb-2">
                         <div class="d-flex align-center justify-space-between w-100">
-                          <h3 class="text-h6 font-weight-bold text-truncate">{{ deck.title }}</h3>
+                            <h3
+                              class="text-h6 font-weight-bold text-truncate"
+                              :title="deck.title"
+                            >
+                              {{ displayDeckTitle(deck.title) }}
+                            </h3>
                           <v-chip
                             v-if="deck.is_public"
                             color="success"
@@ -329,6 +334,20 @@ export default {
       return date.toLocaleString()
     },
 
+
+      // Display-only cleanup: older auto-generated decks were named "Deck for {filename}".
+      // Keep the stored title unchanged, but show a cleaner label in the card list.
+      displayDeckTitle(title) {
+        const t = String(title || '').trim()
+        if (!t) return 'Untitled deck'
+        const prefix = 'Deck for '
+        if (t.toLowerCase().startsWith(prefix.toLowerCase())) {
+          const rest = t.slice(prefix.length).trim()
+          return rest || t
+        }
+        return t
+      },
+
     viewDeck(deck) {
       this.$router.push(`/decks/${deck.id}`)
     },
@@ -521,3 +540,4 @@ export default {
   transform: translateX(5px);
 }
 </style>
+

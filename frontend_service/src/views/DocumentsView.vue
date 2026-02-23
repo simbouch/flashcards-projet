@@ -69,6 +69,12 @@
                 class="modern-table"
                 :no-data-text="documentsStore.loading ? 'Loading documents...' : 'No documents found'"
               >
+                <template #[`item.display_title`]="{ item }">
+                  <div class="text-truncate" :title="getDocumentTitle(item)">
+                    {{ getDocumentTitle(item) }}
+                  </div>
+                </template>
+
                 <template #[`item.status`]="{ item }">
                   <v-chip
                     :color="getStatusColor(item.status)"
@@ -106,8 +112,10 @@
                       size="small"
                       variant="outlined"
                       @click="deleteDocument(item)"
-                      icon="mdi-delete"
-                    ></v-btn>
+                    >
+                      <v-icon start color="error">mdi-delete</v-icon>
+                      <span class="text-high-emphasis">Delete</span>
+                    </v-btn>
                   </div>
                 </template>
               </v-data-table>
@@ -217,58 +225,69 @@
       max-width="800px"
     >
       <v-card v-if="selectedDocument">
-        <v-card-title class="text-h5">
-          {{ selectedDocument.filename }}
+        <v-card-title class="pa-6 pb-2 d-flex align-center justify-space-between">
+          <div class="d-flex flex-column">
+            <span class="text-h6 font-weight-bold">{{ getDocumentTitle(selectedDocument) }}</span>
+            <span class="text-caption text-medium-emphasis">{{ selectedDocument.filename }}</span>
+          </div>
+          <v-chip
+            :color="getStatusColor(selectedDocument.status)"
+            size="small"
+            variant="flat"
+          >
+            <v-icon start size="16">{{ getStatusIcon(selectedDocument.status) }}</v-icon>
+            {{ formatStatus(selectedDocument.status) }}
+          </v-chip>
         </v-card-title>
 
         <v-card-text>
           <v-tabs v-model="activeTab">
-            <v-tab>Document Info</v-tab>
-            <v-tab>Extracted Text</v-tab>
-            <v-tab>Generated Flashcards</v-tab>
+            <v-tab value="info">Document Info</v-tab>
+            <v-tab value="text">Extracted Text</v-tab>
+            <v-tab value="cards">Generated Flashcards</v-tab>
           </v-tabs>
 
-          <v-tabs-items v-model="activeTab">
-            <v-tab-item>
-              <v-list>
+          <!-- Vuetify 3: use v-window for tab content switching -->
+          <v-window v-model="activeTab" class="mt-4">
+            <v-window-item value="info">
+              <v-list density="compact">
                 <v-list-item>
-                  <v-list-item-content>
-                    <v-list-item-title>Filename</v-list-item-title>
-                    <v-list-item-subtitle>{{ selectedDocument.filename }}</v-list-item-subtitle>
-                  </v-list-item-content>
+                  <v-list-item-title class="text-medium-emphasis">Title</v-list-item-title>
+                  <v-list-item-subtitle class="text-high-emphasis">{{ getDocumentTitle(selectedDocument) }}</v-list-item-subtitle>
                 </v-list-item>
 
                 <v-list-item>
-                  <v-list-item-content>
-                    <v-list-item-title>Status</v-list-item-title>
-                    <v-list-item-subtitle>
-                      <v-chip
-                        :color="getStatusColor(selectedDocument.status)"
-                        small
-                      >
-                        {{ formatStatus(selectedDocument.status) }}
-                      </v-chip>
-                    </v-list-item-subtitle>
-                  </v-list-item-content>
+                  <v-list-item-title class="text-medium-emphasis">Filename</v-list-item-title>
+                  <v-list-item-subtitle class="text-high-emphasis">{{ selectedDocument.filename }}</v-list-item-subtitle>
                 </v-list-item>
 
                 <v-list-item>
-                  <v-list-item-content>
-                    <v-list-item-title>Uploaded</v-list-item-title>
-                    <v-list-item-subtitle>{{ formatDate(selectedDocument.created_at) }}</v-list-item-subtitle>
-                  </v-list-item-content>
+                  <v-list-item-title class="text-medium-emphasis">Status</v-list-item-title>
+                  <v-list-item-subtitle>
+                    <v-chip
+                      :color="getStatusColor(selectedDocument.status)"
+                      size="small"
+                      variant="flat"
+                    >
+                      <v-icon start size="16">{{ getStatusIcon(selectedDocument.status) }}</v-icon>
+                      {{ formatStatus(selectedDocument.status) }}
+                    </v-chip>
+                  </v-list-item-subtitle>
+                </v-list-item>
+
+                <v-list-item>
+                  <v-list-item-title class="text-medium-emphasis">Uploaded</v-list-item-title>
+                  <v-list-item-subtitle class="text-high-emphasis">{{ formatDate(selectedDocument.created_at) }}</v-list-item-subtitle>
                 </v-list-item>
 
                 <v-list-item v-if="selectedDocument.error_message">
-                  <v-list-item-content>
-                    <v-list-item-title>Error</v-list-item-title>
-                    <v-list-item-subtitle class="text-error">{{ selectedDocument.error_message }}</v-list-item-subtitle>
-                  </v-list-item-content>
+                  <v-list-item-title class="text-medium-emphasis">Error</v-list-item-title>
+                  <v-list-item-subtitle class="text-error">{{ selectedDocument.error_message }}</v-list-item-subtitle>
                 </v-list-item>
               </v-list>
-            </v-tab-item>
+            </v-window-item>
 
-            <v-tab-item>
+            <v-window-item value="text">
               <div v-if="extractedText" class="pa-4">
                 <pre class="extracted-text">{{ extractedText.content }}</pre>
               </div>
@@ -278,17 +297,17 @@
                   indeterminate
                   color="primary"
                 ></v-progress-circular>
-                  <p v-else>{{ textError || 'No text extracted yet.' }}</p>
+                <p v-else>{{ textError || 'No text extracted yet.' }}</p>
               </div>
-            </v-tab-item>
+            </v-window-item>
 
-            <v-tab-item>
+            <v-window-item value="cards">
               <div v-if="flashcards && flashcards.length > 0" class="pa-4">
                 <v-card
                   v-for="(card, index) in flashcards"
                   :key="index"
                   class="mb-4"
-                  outlined
+                  variant="outlined"
                 >
                   <v-card-title>{{ card.question }}</v-card-title>
                   <v-card-text>{{ card.answer }}</v-card-text>
@@ -300,21 +319,15 @@
                   indeterminate
                   color="primary"
                 ></v-progress-circular>
-                  <p v-else>{{ flashcardsError || 'No flashcards generated yet.' }}</p>
+                <p v-else>{{ flashcardsError || 'No flashcards generated yet.' }}</p>
               </div>
-            </v-tab-item>
-          </v-tabs-items>
+            </v-window-item>
+          </v-window>
         </v-card-text>
 
         <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="primary"
-            text
-            @click="showViewDialog = false"
-          >
-            Close
-          </v-btn>
+          <v-spacer />
+          <v-btn class="modern-btn" variant="outlined" @click="showViewDialog = false">Close</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -338,13 +351,14 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn
-            color="grey darken-1"
-            text
+            class="modern-btn"
+            variant="outlined"
             @click="showDeleteDialog = false"
           >
             Cancel
           </v-btn>
           <v-btn
+            class="modern-btn"
             color="error"
             @click="confirmDelete"
             :loading="deleting"
@@ -369,6 +383,7 @@ export default {
       documentsStore: useDocumentsStore(),
       flashcardsStore: useFlashcardsStore(),
       headers: [
+        { text: 'Title', value: 'display_title', sortable: false },
         { text: 'Filename', value: 'filename' },
         { text: 'Status', value: 'status' },
         { text: 'Uploaded', value: 'created_at' },
@@ -382,7 +397,7 @@ export default {
       uploading: false,
       uploadError: null,
       selectedDocument: null,
-      activeTab: 0,
+      activeTab: 'info',
       extractedText: null,
       loadingText: false,
       textError: null,
@@ -390,6 +405,7 @@ export default {
       loadingFlashcards: false,
       flashcardsError: null,
       selectedDeckId: null,
+      deckTitleByDocumentId: {},
       deleting: false
     }
   },
@@ -409,13 +425,10 @@ export default {
         // Only react when the modal is open and a document is selected
         if (!this.showViewDialog || !this.selectedDocument) return
 
-        // Support both numeric and string tab values (Vuetify 3 can use custom values)
-        const tab = typeof newVal === 'string' ? Number(newVal) : newVal
-
-        if (tab === 1 && !this.extractedText && !this.loadingText) {
+        if (newVal === 'text' && !this.extractedText && !this.loadingText) {
           await this.fetchExtractedText()
         }
-        if (tab === 2 && (!this.flashcards || this.flashcards.length === 0) && !this.loadingFlashcards) {
+        if (newVal === 'cards' && (!this.flashcards || this.flashcards.length === 0) && !this.loadingFlashcards) {
           await this.fetchFlashcards()
         }
       }
@@ -423,6 +436,48 @@ export default {
   methods: {
     async fetchDocuments() {
       await this.documentsStore.fetchDocuments()
+      await this.fetchDocumentTitles()
+    },
+
+    async fetchDocumentTitles() {
+      try {
+        const decksResponse = await decksAPI.getDecks()
+        const allDecks = decksResponse?.data || []
+
+        const bestByDoc = {}
+        for (const d of allDecks) {
+          if (!d?.document_id) continue
+
+          const prev = bestByDoc[d.document_id]
+          if (!prev) {
+            bestByDoc[d.document_id] = d
+            continue
+          }
+
+          const tPrev = new Date(prev.created_at || 0).getTime()
+          const tNew = new Date(d.created_at || 0).getTime()
+          if (tNew >= tPrev) bestByDoc[d.document_id] = d
+        }
+
+        const nextMap = {}
+        for (const [docId, deck] of Object.entries(bestByDoc)) {
+          nextMap[docId] = deck?.title || ''
+        }
+        this.deckTitleByDocumentId = nextMap
+      } catch (e) {
+        // Fail-soft: titles are a UI enhancement only
+        console.warn('Failed to fetch deck titles for documents:', e)
+      }
+    },
+
+    getDocumentTitle(document) {
+      if (!document) return ''
+      const fromDeck = this.deckTitleByDocumentId?.[document.id]
+      if (fromDeck && String(fromDeck).trim()) return String(fromDeck).trim()
+
+      const filename = String(document.filename || '').trim()
+      if (!filename) return 'Untitled'
+      return filename.replace(/\.[^/.]+$/, '')
     },
 
     formatDate(dateString) {
@@ -485,6 +540,8 @@ export default {
         this.showUploadDialog = false
         this.fileToUpload = null
           this.deckTitle = ''
+        // Refresh list/titles (deck might not exist yet, but keeps UI consistent)
+        await this.fetchDocuments()
       } catch (error) {
         this.uploadError = error.message || 'Failed to upload document'
       } finally {
@@ -495,7 +552,7 @@ export default {
     async viewDocument(document) {
       this.selectedDocument = document
       this.showViewDialog = true
-      this.activeTab = 0
+      this.activeTab = 'info'
       this.extractedText = null
         this.textError = null
       this.flashcards = []
@@ -581,7 +638,7 @@ export default {
           console.log(`Successfully deleted document: ${this.selectedDocument.id}`)
           this.showDeleteDialog = false
           // Refresh the documents list
-          await this.documentsStore.fetchDocuments()
+          await this.fetchDocuments()
         } else {
           console.error('Failed to delete document: API returned false')
           this.documentsStore.error = 'Failed to delete document. Please try again.'

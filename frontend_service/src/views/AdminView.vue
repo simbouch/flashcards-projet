@@ -61,7 +61,19 @@
                   <div class="d-flex gap-2">
                       <v-btn class="modern-btn" size="small" color="primary" prepend-icon="mdi-pencil" :disabled="isSystem(item)" @click="openEdit(item)">Edit</v-btn>
                       <v-btn class="modern-btn" size="small" variant="outlined" prepend-icon="mdi-lock-reset" :disabled="isSystem(item)" @click="openReset(item)">Reset</v-btn>
-                      <v-btn class="modern-btn" size="small" color="error" variant="outlined" icon="mdi-delete" :disabled="isSelf(item) || isSystem(item)" @click="openDelete(item)"></v-btn>
+                      <!-- Delete: use a clear text label (not red text) + red border/icon for destructive action -->
+                      <v-btn
+                        class="modern-btn"
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                        :disabled="isSelf(item) || isSystem(item)"
+                        aria-label="Delete user"
+                        @click="openDelete(item)"
+                      >
+                        <v-icon start color="error">mdi-delete</v-icon>
+                        <span class="text-high-emphasis">Delete</span>
+                      </v-btn>
                   </div>
                 </template>
               </v-data-table>
