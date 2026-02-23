@@ -49,12 +49,12 @@ export const useDocumentsStore = defineStore('documents', {
       }
     },
     
-    async uploadDocument(file, title = null) {
+    async uploadDocument(file, title = null, isPublic = false) {
       this.loading = true
       this.error = null
       
       try {
-        const response = await documentsAPI.uploadDocument(file, title)
+        const response = await documentsAPI.uploadDocument(file, title, isPublic)
         // Add the new document to the list
         this.documents.push(response.data)
         this.loading = false

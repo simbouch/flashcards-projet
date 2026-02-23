@@ -178,6 +178,16 @@
             class="mb-4"
           ></v-text-field>
 
+          <v-switch
+            v-model="deckIsPublic"
+            inset
+            color="primary"
+            label="Make this deck public"
+            class="mb-2"
+            hint="If enabled, your generated deck will be visible in Public Decks"
+            persistent-hint
+          ></v-switch>
+
           <v-alert
             v-if="uploadError"
             type="error"
@@ -394,6 +404,7 @@ export default {
       showDeleteDialog: false,
       fileToUpload: null,
       deckTitle: '',
+      deckIsPublic: false,
       uploading: false,
       uploadError: null,
       selectedDocument: null,
@@ -535,11 +546,12 @@ export default {
       this.uploadError = null
 
       try {
-          const file = Array.isArray(this.fileToUpload) ? this.fileToUpload[0] : this.fileToUpload
-          await this.documentsStore.uploadDocument(file, this.deckTitle)
+        const file = Array.isArray(this.fileToUpload) ? this.fileToUpload[0] : this.fileToUpload
+        await this.documentsStore.uploadDocument(file, this.deckTitle, this.deckIsPublic)
         this.showUploadDialog = false
         this.fileToUpload = null
-          this.deckTitle = ''
+        this.deckTitle = ''
+        this.deckIsPublic = false
         // Refresh list/titles (deck might not exist yet, but keeps UI consistent)
         await this.fetchDocuments()
       } catch (error) {

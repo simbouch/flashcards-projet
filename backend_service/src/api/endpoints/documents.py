@@ -41,6 +41,7 @@ async def process_document(
     document_id: str,
     file_path: Path,
     deck_title: Optional[str] = None,
+    deck_is_public: bool = False,
 ):
     """
     Process a document: extract text with OCR and generate flashcards.
@@ -92,7 +93,8 @@ async def process_document(
         deck_data = schemas.DeckCreate(
             title=deck_name,
             description=f"Automatically generated from {document.filename}",
-            document_id=document_id
+            document_id=document_id,
+            is_public=bool(deck_is_public),
         )
         deck = crud.create_deck(db, deck_data, owner_id=document.owner_id)
 
@@ -126,6 +128,7 @@ async def create_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     title: Optional[str] = Form(None),
+    is_public: bool = Form(False),
     current_user: models.User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ) -> Any:
@@ -192,7 +195,7 @@ async def create_document(
 
     # Process document in background
     background_tasks.add_task(
-        process_document, document.id, file_path, title
+        process_document, document.id, file_path, title, is_public
     )
 
     logger.info(f"Document created: {document.id}")

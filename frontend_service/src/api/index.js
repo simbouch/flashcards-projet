@@ -108,12 +108,14 @@ export const documentsAPI = {
   getDocument(id) {
     return apiClient.get(`/documents/${id}`)
   },
-  uploadDocument(file, title = null) {
+  uploadDocument(file, title = null, isPublic = false) {
     const formData = new FormData()
     formData.append('file', file)
     if (title && String(title).trim()) {
       formData.append('title', String(title).trim())
     }
+    // Backend expects multipart form field `is_public` (bool)
+    formData.append('is_public', String(!!isPublic))
     return apiClient.post('/documents', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
