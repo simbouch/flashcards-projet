@@ -113,21 +113,11 @@
                       {{ deck.description }}
                     </p>
 
-                    <!-- Deck Stats -->
-                    <div class="d-flex align-center justify-space-between mb-4">
-                      <div class="d-flex align-center">
-                        <v-icon size="16" class="text-medium-emphasis mr-1">mdi-card-multiple</v-icon>
-                        <span class="text-caption text-medium-emphasis">{{ deck.flashcards?.length || 0 }} cards</span>
+                      <!-- Keep this view consistent with My Decks: show only creation date (no card count/owner) -->
+                      <div class="d-flex align-center text-caption text-medium-emphasis">
+                        <v-icon size="16" class="mr-1">mdi-calendar</v-icon>
+                        Created {{ formatDate(deck.created_at) }}
                       </div>
-                      <div class="d-flex align-center">
-                        <v-icon size="16" class="text-medium-emphasis mr-1">mdi-account</v-icon>
-                        <span class="text-caption text-medium-emphasis">{{ deck.owner?.username || 'Unknown' }}</span>
-                      </div>
-                    </div>
-
-                    <div class="text-caption text-medium-emphasis">
-                      Created: {{ formatDate(deck.created_at) }}
-                    </div>
                   </v-card-text>
 
                   <!-- Card Actions -->

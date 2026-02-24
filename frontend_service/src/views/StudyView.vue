@@ -314,7 +314,7 @@
                 <v-icon color="green">mdi-check-circle</v-icon>
               </v-list-item-icon>
               <v-list-item-content>
-                <v-list-item-title>Mastered (Down + Double Fullback): {{ stats.mastered + stats.removed }}</v-list-item-title>
+                  <v-list-item-title>Mastered: {{ stats.mastered + stats.removed }}</v-list-item-title>
               </v-list-item-content>
             </v-list-item>
 
@@ -323,7 +323,7 @@
                 <v-icon color="info">mdi-arrow-down-bold-circle</v-icon>
               </v-list-item-icon>
               <v-list-item-content>
-                <v-list-item-title>Fullback: {{ stats.fullback }}</v-list-item-title>
+                  <v-list-item-title>Review Later: {{ stats.fullback }}</v-list-item-title>
               </v-list-item-content>
             </v-list-item>
 

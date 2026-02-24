@@ -251,7 +251,7 @@
       <v-container>
         <div class="text-center text-white w-100">
             <p class="mb-0 font-weight-medium text-center">
-              &copy; 2026 FlashCards &mdash; Built by KHRIBECH BOUCHAIB
+              &copy; 2026 FlashCards &mdash; Built by Khribech Bouchaib
             </p>
         </div>
       </v-container>
