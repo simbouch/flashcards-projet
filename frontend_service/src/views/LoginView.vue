@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="login">
     <v-container class="py-8">
       <v-row justify="center" align="center" class="min-height-screen">
@@ -15,6 +15,21 @@
             </div>
 
             <v-card-text class="pa-8 pt-4">
+              <!-- Success Alert (after registration) -->
+              <v-alert
+                v-if="successMessage"
+                type="success"
+                variant="tonal"
+                class="mb-6 modern-card"
+                closable
+                @click:close="successMessage = ''"
+              >
+                <template v-slot:prepend>
+                  <v-icon>mdi-check-circle</v-icon>
+                </template>
+                {{ successMessage }}
+              </v-alert>
+
               <!-- Error Alert -->
               <v-alert
                 v-if="authStore.error"
@@ -114,7 +129,16 @@ export default {
       username: '',
       password: '',
       showPassword: false,
+      successMessage: '',
       authStore: useAuthStore()
+    }
+  },
+  created() {
+    if (this.$route?.query?.registered === 'true') {
+      this.successMessage = 'Registration successful! You can now log in and enjoy learning.'
+      const nextQuery = { ...this.$route.query }
+      delete nextQuery.registered
+      this.$router.replace({ query: nextQuery })
     }
   },
   methods: {
@@ -214,10 +238,5 @@ export default {
 .auth-header .v-avatar {
   animation: float 3s ease-in-out infinite;
 }
-
-/* Focus improvements */
-.modern-input :deep(.v-field--focused .v-field__outline) {
-  --v-field-border-width: 2px;
-  --v-field-border-opacity: 1;
-}
 </style>
+

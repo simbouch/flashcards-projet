@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+﻿import { defineStore } from 'pinia'
 import { authAPI } from '../api'
 
 export const useAuthStore = defineStore('auth', {
@@ -38,7 +38,15 @@ export const useAuthStore = defineStore('auth', {
         return true
       } catch (error) {
         this.loading = false
-        this.error = error.response?.data?.detail || 'Login failed'
+        const status = error.response?.status
+        const detail = error.response?.data?.detail
+        const detailText = typeof detail === 'string' ? detail : null
+
+        if (status === 401 || (detailText && /incorrect username or password/i.test(detailText))) {
+          this.error = 'Incorrect username or password. Please try again.'
+        } else {
+          this.error = detailText || 'Login failed. Please try again.'
+        }
         return false
       }
     },
@@ -167,3 +175,5 @@ export const useAuthStore = defineStore('auth', {
     }
   }
 })
+
+

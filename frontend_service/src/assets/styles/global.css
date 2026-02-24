@@ -234,13 +234,16 @@
   background: var(--gradient-secondary);
 }
 
-/* Focus styles */
-.v-btn:focus-visible,
-.v-text-field:focus-within,
-.v-textarea:focus-within,
-.v-select:focus-within {
+/* Focus styles (keyboard only)
+   - Keep a visible focus ring for buttons/links
+   - Avoid the extra browser outline on form inputs (Vuetify already styles focus) */
+:where(.v-btn, a, button):focus-visible {
   outline: 2px solid #6366F1 !important;
   outline-offset: 2px !important;
+}
+
+:where(input, textarea, select):focus-visible {
+  outline: none !important;
 }
 
 /* Modern spacing utilities */

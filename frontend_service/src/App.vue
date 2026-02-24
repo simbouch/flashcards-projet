@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <v-app>
     <!-- Modern Navigation Bar with Glass Effect -->
     <v-app-bar
@@ -250,12 +250,9 @@
     <v-footer class="gradient-primary py-4">
       <v-container>
         <div class="text-center text-white w-100">
-          <p class="mb-1 font-weight-medium text-center">
-            {{ new Date().getFullYear() }} — <strong>FlashCards App</strong>
-          </p>
-          <p class="text-caption mb-0 opacity-80 text-center">
-            Powered by AI • Built with ❤️
-          </p>
+            <p class="mb-0 font-weight-medium text-center">
+              &copy; 2026 FlashCards &mdash; Built by KHRIBECH BOUCHAIB
+            </p>
         </div>
       </v-container>
     </v-footer>
@@ -408,3 +405,5 @@ export default {
   background-color: rgba(239, 68, 68, 0.1);
 }
 </style>
+
+
