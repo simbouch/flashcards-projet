@@ -1,5 +1,4 @@
 {
-  "dashboard": {
     "id": null,
     "title": "LLM Service - Detailed Monitoring",
     "tags": ["flashcards", "llm", "ai"],
@@ -159,5 +158,4 @@
       "to": "now"
     },
     "refresh": "5s"
-  }
 }

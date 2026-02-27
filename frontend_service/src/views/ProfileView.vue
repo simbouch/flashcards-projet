@@ -141,8 +141,7 @@
               </v-form>
             </v-card-text>
 
-            <v-card-actions class="pa-6 pt-0">
-              <v-spacer></v-spacer>
+      <v-card-actions class="pa-6 pt-0 btn-row btn-row--end">
 
               <template v-if="editMode">
                 <v-btn
@@ -155,7 +154,7 @@
                 </v-btn>
 
                 <v-btn
-                  class="modern-btn ml-2"
+            class="modern-btn"
                   color="primary"
                   @click="updateProfile"
                   :loading="authStore.loading"
@@ -174,7 +173,7 @@
               >
                 Edit Profile
               </v-btn>
-            </v-card-actions>
+      </v-card-actions>
           </v-card>
 
           <!-- Account Statistics Card -->
@@ -268,7 +267,7 @@
                 We do not share your personal information with third parties.
               </p>
 
-              <div class="d-flex flex-wrap gap-3">
+          <div class="btn-row">
                 <v-btn
                   class="modern-btn"
                   color="primary"
@@ -319,24 +318,25 @@
           ></v-text-field>
         </v-card-text>
 
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="grey darken-1"
-            text
-            @click="showDeleteAccountDialog = false"
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="error"
-            @click="deleteAccount"
-            :loading="deletingAccount"
-            :disabled="!deleteAccountPassword"
-          >
-            Delete My Account
-          </v-btn>
-        </v-card-actions>
+      <v-card-actions class="btn-row btn-row--end">
+        <v-btn
+          class="modern-btn"
+          variant="outlined"
+          @click="showDeleteAccountDialog = false"
+        >
+          Cancel
+        </v-btn>
+        <v-btn
+          class="modern-btn"
+          color="error"
+          @click="deleteAccount"
+          :loading="deletingAccount"
+          :disabled="!deleteAccountPassword"
+          prepend-icon="mdi-delete"
+        >
+          Delete My Account
+        </v-btn>
+      </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -387,24 +387,25 @@
           ></v-checkbox>
         </v-card-text>
 
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="grey darken-1"
-            text
-            @click="showExportDataDialog = false"
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="primary"
-            @click="exportData"
-            :loading="exporting"
-            :disabled="exportOptions.length === 0"
-          >
-            Export
-          </v-btn>
-        </v-card-actions>
+      <v-card-actions class="btn-row btn-row--end">
+        <v-btn
+          class="modern-btn"
+          variant="outlined"
+          @click="showExportDataDialog = false"
+        >
+          Cancel
+        </v-btn>
+        <v-btn
+          class="modern-btn"
+          color="primary"
+          @click="exportData"
+          :loading="exporting"
+          :disabled="exportOptions.length === 0"
+          prepend-icon="mdi-download"
+        >
+          Export
+        </v-btn>
+      </v-card-actions>
       </v-card>
     </v-dialog>
   </div>
@@ -415,6 +416,7 @@ import { useAuthStore } from '../store/auth'
 import { useDocumentsStore } from '../store/documents'
 import { useDecksStore } from '../store/decks'
 import { useStudyStore } from '../store/study'
+import { authAPI } from '../api'
 
 export default {
   name: 'ProfileView',
@@ -489,14 +491,14 @@ export default {
       await this.decksStore.fetchDecks()
       this.stats.decks = this.decksStore.decks.length
 
-      // Count flashcards
-      let flashcardCount = 0
-      for (const deck of this.decksStore.decks) {
-        if (deck.flashcards) {
-          flashcardCount += deck.flashcards.length
-        }
+      // Flashcards count (backend aggregate, because /decks list doesn't include flashcards)
+      try {
+        const resp = await authAPI.getStats()
+        this.stats.flashcards = resp.data?.flashcards ?? 0
+      } catch (e) {
+        console.error('Failed to load user stats:', e)
+        this.stats.flashcards = 0
       }
-      this.stats.flashcards = flashcardCount
 
       // Load study sessions
       await this.studyStore.fetchStudySessions()

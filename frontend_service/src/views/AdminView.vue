@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="admin-view">
     <v-container class="py-8">
       <div class="text-center mb-8 animate-fade-in">
@@ -58,7 +58,7 @@
                   <v-chip :color="item.is_active ? 'green' : 'red'" size="small" variant="flat">{{ item.is_active ? 'active' : 'inactive' }}</v-chip>
                 </template>
                 <template #[`item.actions`]="{ item }">
-                  <div class="d-flex gap-2">
+                    <div class="btn-row btn-row--compact">
                       <v-btn class="modern-btn" size="small" color="primary" prepend-icon="mdi-pencil" :disabled="isSystem(item)" @click="openEdit(item)">Edit</v-btn>
                       <v-btn class="modern-btn" size="small" variant="outlined" prepend-icon="mdi-lock-reset" :disabled="isSystem(item)" @click="openReset(item)">Reset</v-btn>
                       <!-- Delete: use a clear text label (not red text) + red border/icon for destructive action -->
@@ -74,7 +74,7 @@
                         <v-icon start color="error">mdi-delete</v-icon>
                         <span class="text-high-emphasis">Delete</span>
                       </v-btn>
-                  </div>
+                    </div>
                 </template>
               </v-data-table>
             </v-card-text>
@@ -85,17 +85,16 @@
       <v-dialog v-model="showEditDialog" max-width="520px">
         <v-card class="modern-card">
           <v-card-title class="pa-6 pb-4"><h3 class="text-h6 font-weight-bold">Edit user: {{ editForm.username }}</h3></v-card-title>
-          <v-card-text class="pa-6 pt-0">
+            <v-card-text class="pa-6 pt-0">
               <v-text-field v-model="editForm.email" label="Email" type="email" variant="outlined" class="mb-3" :disabled="isSystem(editForm)" />
               <v-text-field v-model="editForm.full_name" label="Full name" variant="outlined" class="mb-3" :disabled="isSystem(editForm)" />
               <v-select v-model="editForm.role" :items="['user','admin']" label="Role" variant="outlined" class="mb-3" :disabled="isSelf(editForm) || isSystem(editForm)" />
               <v-switch v-model="editForm.is_active" label="Active" color="primary" :disabled="isSelf(editForm) || isSystem(editForm)" />
-          </v-card-text>
-          <v-card-actions class="pa-6 pt-0">
-            <v-spacer />
-            <v-btn class="modern-btn" variant="outlined" @click="showEditDialog=false">Cancel</v-btn>
-              <v-btn class="modern-btn ml-2" color="primary" :loading="saving" prepend-icon="mdi-content-save" :disabled="isSystem(editForm)" @click="saveEdit">Save</v-btn>
-          </v-card-actions>
+            </v-card-text>
+            <v-card-actions class="pa-6 pt-0 btn-row btn-row--end">
+              <v-btn class="modern-btn" variant="outlined" @click="showEditDialog=false">Cancel</v-btn>
+              <v-btn class="modern-btn" color="primary" :loading="saving" prepend-icon="mdi-content-save" :disabled="isSystem(editForm)" @click="saveEdit">Save</v-btn>
+            </v-card-actions>
         </v-card>
       </v-dialog>
 
@@ -105,12 +104,11 @@
           <v-card-text class="pa-6 pt-0">
             <v-text-field v-model="resetPassword" label="New password" type="password" variant="outlined" />
             <p class="text-caption text-medium-emphasis mt-2">Min 8 chars, 1 uppercase, 1 lowercase, 1 digit.</p>
-          </v-card-text>
-          <v-card-actions class="pa-6 pt-0">
-            <v-spacer />
-            <v-btn class="modern-btn" variant="outlined" @click="showResetDialog=false">Cancel</v-btn>
-              <v-btn class="modern-btn ml-2" color="primary" :loading="saving" prepend-icon="mdi-lock-reset" :disabled="!resetPassword || isSystem(resetUser)" @click="confirmReset">Reset</v-btn>
-          </v-card-actions>
+            </v-card-text>
+            <v-card-actions class="pa-6 pt-0 btn-row btn-row--end">
+              <v-btn class="modern-btn" variant="outlined" @click="showResetDialog=false">Cancel</v-btn>
+              <v-btn class="modern-btn" color="primary" :loading="saving" prepend-icon="mdi-lock-reset" :disabled="!resetPassword || isSystem(resetUser)" @click="confirmReset">Reset</v-btn>
+            </v-card-actions>
         </v-card>
       </v-dialog>
 
@@ -119,12 +117,11 @@
           <v-card-title class="pa-6 pb-4"><h3 class="text-h6 font-weight-bold">Confirm delete</h3></v-card-title>
           <v-card-text class="pa-6 pt-0">
             Delete user <strong>{{ deleteUser?.username }}</strong>? This cannot be undone.
-          </v-card-text>
-          <v-card-actions class="pa-6 pt-0">
-            <v-spacer />
-            <v-btn class="modern-btn" variant="outlined" @click="showDeleteDialog=false">Cancel</v-btn>
-              <v-btn class="modern-btn ml-2" color="error" :loading="saving" :disabled="isSystem(deleteUser)" @click="confirmDelete">Delete</v-btn>
-          </v-card-actions>
+            </v-card-text>
+            <v-card-actions class="pa-6 pt-0 btn-row btn-row--end">
+              <v-btn class="modern-btn" variant="outlined" @click="showDeleteDialog=false">Cancel</v-btn>
+              <v-btn class="modern-btn" color="error" :loading="saving" :disabled="isSystem(deleteUser)" @click="confirmDelete">Delete</v-btn>
+            </v-card-actions>
         </v-card>
       </v-dialog>
     </v-container>

@@ -169,18 +169,64 @@
 }
 
 /* Modern button styles */
-.modern-btn {
+.btn-row {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 0.75rem !important; /* unified spacing between buttons */
+}
+
+.btn-row--end {
+  justify-content: flex-end !important;
+}
+
+.btn-row--center {
+  justify-content: center !important;
+}
+
+.btn-row--compact {
+  gap: 0.5rem !important;
+  /* Compact rows are mainly used in table action columns; don't wrap on desktop */
+  flex-wrap: nowrap !important;
+}
+
+/* In case a v-spacer is left inside an action row, don't let it break the spacing */
+.btn-row .v-spacer {
+  display: none !important;
+}
+
+.modern-btn,
+.modern-btn-primary,
+.modern-btn-secondary {
   border-radius: var(--border-radius-lg) !important;
   text-transform: none !important;
   font-weight: 600 !important;
   letter-spacing: 0.025em !important;
   transition: all var(--transition-fast) !important;
   box-shadow: var(--shadow-sm) !important;
+  /* Ensure content feels centered vertically/horizontally */
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-.modern-btn:hover {
+.modern-btn:hover,
+.modern-btn-primary:hover,
+.modern-btn-secondary:hover {
   transform: translateY(-2px) !important;
   box-shadow: var(--shadow-md) !important;
+}
+
+/* Make sure Vuetify internal button content is centered (icons + text) */
+:where(.v-btn.modern-btn, .v-btn.modern-btn-primary, .v-btn.modern-btn-secondary) .v-btn__content {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+:where(.v-btn.modern-btn, .v-btn.modern-btn-primary, .v-btn.modern-btn-secondary) .v-btn__prepend,
+:where(.v-btn.modern-btn, .v-btn.modern-btn-primary, .v-btn.modern-btn-secondary) .v-btn__append {
+  align-items: center !important;
 }
 
 .modern-btn-primary {
@@ -266,9 +312,23 @@
     border-radius: var(--border-radius-lg) !important;
   }
   
-  .modern-btn {
+  .modern-btn,
+  .modern-btn-primary,
+  .modern-btn-secondary {
     width: 100% !important;
     margin-bottom: 0.5rem !important;
+  }
+
+  /* When buttons are in a row, gap controls spacing (avoid double margins) */
+  .btn-row .modern-btn,
+  .btn-row .modern-btn-primary,
+  .btn-row .modern-btn-secondary {
+    margin-bottom: 0 !important;
+  }
+
+  /* On mobile we want wrapping / stacking, not horizontal overflow */
+  .btn-row--compact {
+    flex-wrap: wrap !important;
   }
 }
 

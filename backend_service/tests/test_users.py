@@ -95,3 +95,66 @@ def test_last_admin_cannot_self_delete(client, db_session):
 
     db_session.expire_all()
     assert crud.get_user(db_session, admin.id) is not None
+
+
+@pytest.mark.integration
+def test_user_me_stats_counts_owned_entities(client, db_session):
+    from db_module import crud, schemas, models
+
+    suffix = uuid.uuid4().hex
+    password = "Password123"
+    user_in = schemas.UserCreate(
+        email=f"stats_{suffix}@example.com",
+        username=f"stats_{suffix}",
+        password=password,
+        full_name="Stats User",
+    )
+    user = crud.create_user(db_session, user_in)
+
+    # Documents
+    doc1 = crud.create_document(
+        db_session,
+        schemas.DocumentCreate(filename="a.pdf", mime_type="application/pdf"),
+        owner_id=user.id,
+        file_path="uploads/a.pdf",
+    )
+    crud.create_document(
+        db_session,
+        schemas.DocumentCreate(filename="b.pdf", mime_type="application/pdf"),
+        owner_id=user.id,
+        file_path="uploads/b.pdf",
+    )
+
+    # Deck + Flashcards
+    deck = crud.create_deck(
+        db_session,
+        schemas.DeckCreate(title="Deck 1", description=None, is_public=False, document_id=doc1.id),
+        owner_id=user.id,
+    )
+    for i in range(3):
+        crud.create_flashcard(
+            db_session,
+            schemas.FlashcardCreate(question=f"Q{i}", answer="A", deck_id=deck.id),
+        )
+
+    # Study sessions
+    db_session.add(
+        models.StudySession(id=str(uuid.uuid4()), user_id=user.id, deck_id=deck.id)
+    )
+    db_session.add(
+        models.StudySession(id=str(uuid.uuid4()), user_id=user.id, deck_id=deck.id)
+    )
+    db_session.commit()
+
+    token = _login_and_get_token(client, user.username, password)
+    resp = client.get(
+        "/api/v1/users/me/stats",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["documents"] == 2
+    assert data["decks"] == 1
+    assert data["flashcards"] == 3
+    assert data["study_sessions"] == 2

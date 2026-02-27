@@ -21,6 +21,39 @@ async def read_users_me(
     """
     return current_user
 
+
+@router.get("/me/stats", response_model=schemas.UserStats)
+async def read_users_me_stats(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> Any:
+    """Get aggregate counts for the current user (for Profile statistics)."""
+    documents_count = db.query(models.Document).filter(
+        models.Document.owner_id == current_user.id
+    ).count()
+
+    decks_count = db.query(models.Deck).filter(
+        models.Deck.owner_id == current_user.id
+    ).count()
+
+    flashcards_count = (
+        db.query(models.Flashcard)
+        .join(models.Deck, models.Flashcard.deck_id == models.Deck.id)
+        .filter(models.Deck.owner_id == current_user.id)
+        .count()
+    )
+
+    study_sessions_count = db.query(models.StudySession).filter(
+        models.StudySession.user_id == current_user.id
+    ).count()
+
+    return schemas.UserStats(
+        documents=documents_count,
+        decks=decks_count,
+        flashcards=flashcards_count,
+        study_sessions=study_sessions_count,
+    )
+
 @router.put("/me", response_model=schemas.User)
 async def update_user_me(
     user_in: schemas.UserUpdate,

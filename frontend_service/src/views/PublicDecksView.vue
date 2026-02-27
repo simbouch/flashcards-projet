@@ -218,8 +218,7 @@
           </v-form>
         </v-card-text>
 
-        <v-card-actions class="pa-6 pt-0">
-          <v-spacer></v-spacer>
+		<v-card-actions class="pa-6 pt-0 btn-row btn-row--end">
           <v-btn
             class="modern-btn"
             color="grey"
@@ -229,7 +228,7 @@
             Cancel
           </v-btn>
           <v-btn
-            class="modern-btn ml-2"
+			class="modern-btn"
             color="primary"
             @click="confirmClone"
             :loading="cloning"

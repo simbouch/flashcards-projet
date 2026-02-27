@@ -11,7 +11,7 @@
               </v-avatar>
             </div>
             <h1 class="text-h2 font-weight-bold mb-4 gradient-text">
-              Welcome to FlashCards
+                Welcome to FlashCards ✨
             </h1>
             <p class="text-h6 text-medium-emphasis mb-6 max-width-600 mx-auto">
               Transform your documents into interactive flashcards using cutting-edge OCR and AI technology.
@@ -20,17 +20,17 @@
             <div class="hero-stats d-flex justify-center flex-wrap gap-4 mb-8">
               <div class="stat-item text-center">
                 <v-icon size="32" class="text-primary mb-2">mdi-lightning-bolt</v-icon>
-                <p class="text-h6 font-weight-bold mb-1">Fast</p>
+        <p class="text-h6 font-weight-bold mb-1">Fast ⚡</p>
                 <p class="text-caption">Instant Processing</p>
               </div>
               <div class="stat-item text-center">
                 <v-icon size="32" class="text-success mb-2">mdi-robot</v-icon>
-                <p class="text-h6 font-weight-bold mb-1">Smart</p>
+        <p class="text-h6 font-weight-bold mb-1">Smart 🤖</p>
                 <p class="text-caption">AI-Powered</p>
               </div>
               <div class="stat-item text-center">
                 <v-icon size="32" class="text-info mb-2">mdi-chart-line</v-icon>
-                <p class="text-h6 font-weight-bold mb-1">Effective</p>
+        <p class="text-h6 font-weight-bold mb-1">Effective 📈</p>
                 <p class="text-caption">Track Progress</p>
               </div>
             </div>
@@ -316,6 +316,41 @@ export default {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
   border-radius: var(--border-radius-2xl);
   margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Subtle animated background accents (makes the hero feel less "white") */
+.hero-section::before,
+.hero-section::after {
+  content: '';
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 999px;
+  filter: blur(40px);
+  opacity: 0.55;
+  z-index: 0;
+  animation: hero-blob 10s ease-in-out infinite;
+}
+
+.hero-section::before {
+  top: -120px;
+  left: -120px;
+  background: radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.55), transparent 60%);
+}
+
+.hero-section::after {
+  bottom: -140px;
+  right: -140px;
+  background: radial-gradient(circle at 70% 70%, rgba(139, 92, 246, 0.5), transparent 60%);
+  animation-delay: -4s;
+}
+
+.hero-section > * {
+  position: relative;
+  z-index: 1;
 }
 
 .hero-icon {
@@ -460,6 +495,11 @@ export default {
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-10px); }
+}
+
+@keyframes hero-blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, -10px) scale(1.05); }
 }
 
 .hero-icon .v-avatar {

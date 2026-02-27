@@ -1,5 +1,4 @@
 {
-  "dashboard": {
     "id": null,
     "title": "Backend Service - Detailed Monitoring",
     "tags": ["flashcards", "backend", "api"],
@@ -140,5 +139,4 @@
       "to": "now"
     },
     "refresh": "5s"
-  }
 }

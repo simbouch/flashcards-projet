@@ -16,6 +16,7 @@ from ...config import settings
 from ...logger_config import logger
 from ...services.ocr_service import OCRServiceClient
 from ...services.llm_service import LLMServiceClient
+from ...services.flashcard_count import estimate_num_cards_for_text
 
 router = APIRouter()
 
@@ -80,11 +81,18 @@ async def process_document(
         )
 
         # Generate flashcards
-        # Keep the pipeline responsive by default; can be overridden via env.
-        flashcard_result = await llm_client.generate_flashcards(
+        # Auto-scale the number of cards based on extracted text size.
+        # We keep a minimum default from env, and cap to the LLM service validation (<= 20).
+        num_cards = estimate_num_cards_for_text(
             extracted_text,
-            num_cards=settings.DEFAULT_NUM_CARDS_PER_DOCUMENT
+            min_cards=settings.DEFAULT_NUM_CARDS_PER_DOCUMENT,
+            max_cards=20,
         )
+        logger.info(
+            f"Generating {num_cards} flashcards (min_default={settings.DEFAULT_NUM_CARDS_PER_DOCUMENT}) "
+            f"from {len(extracted_text)} characters of extracted text"
+        )
+        flashcard_result = await llm_client.generate_flashcards(extracted_text, num_cards=num_cards)
 
         # Create a deck for the flashcards
         document = crud.get_document(db, document_id)

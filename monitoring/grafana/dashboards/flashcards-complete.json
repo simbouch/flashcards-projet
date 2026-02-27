@@ -1,5 +1,4 @@
 {
-  "dashboard": {
     "id": null,
     "title": "Flashcards Application - Complete Monitoring",
     "tags": ["flashcards", "complete", "monitoring"],
@@ -226,5 +225,4 @@
       "to": "now"
     },
     "refresh": "5s"
-  }
 }

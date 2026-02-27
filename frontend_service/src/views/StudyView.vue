@@ -265,14 +265,17 @@
                 </v-alert>
               </v-card-text>
 
-              <v-card-actions>
-                <v-btn
-                  color="primary"
-                  @click="$router.push(`/decks/${deckId}`)"
-                >
-                  Back to Deck
-                </v-btn>
-              </v-card-actions>
+          <v-card-actions class="btn-row btn-row--end">
+            <v-btn
+              class="modern-btn"
+              variant="outlined"
+              color="primary"
+              prepend-icon="mdi-arrow-left"
+              @click="$router.push(`/decks/${deckId}`)"
+            >
+              Back to Deck
+            </v-btn>
+          </v-card-actions>
             </v-card>
           </v-col>
         </v-row>
@@ -338,24 +341,25 @@
           </v-list>
         </v-card-text>
 
-        <v-card-actions>
-          <v-btn
-            color="secondary"
-            text
-            @click="restartStudy"
-          >
-            Study Again
-          </v-btn>
-
-          <v-spacer></v-spacer>
-
-          <v-btn
-            color="primary"
-            @click="finishStudy"
-          >
-            Finish
-          </v-btn>
-        </v-card-actions>
+    <v-card-actions class="btn-row btn-row--end">
+      <v-btn
+        class="modern-btn"
+        variant="outlined"
+        color="secondary"
+        prepend-icon="mdi-refresh"
+        @click="restartStudy"
+      >
+        Study Again
+      </v-btn>
+      <v-btn
+        class="modern-btn"
+        color="primary"
+        prepend-icon="mdi-check"
+        @click="finishStudy"
+      >
+        Finish
+      </v-btn>
+    </v-card-actions>
       </v-card>
     </v-dialog>
   </div>

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="decks">
     <v-container class="py-8">
       <!-- Header Section -->
@@ -10,7 +10,7 @@
               Manage and study your personalized flashcard collections
             </p>
           </div>
-          <div class="d-flex gap-2">
+            <div class="btn-row">
             <v-btn
               class="modern-btn-primary"
               @click="showCreateDialog = true"
@@ -224,23 +224,24 @@
           </v-form>
         </v-card-text>
 
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="grey darken-1"
-            text
-            @click="showCreateDialog = false"
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="primary"
-            @click="saveDeck"
-            :loading="saving"
-          >
-            {{ editMode ? 'Update' : 'Create' }}
-          </v-btn>
-        </v-card-actions>
+      <v-card-actions class="btn-row btn-row--end">
+        <v-btn
+          class="modern-btn"
+          variant="outlined"
+          @click="showCreateDialog = false"
+        >
+          Cancel
+        </v-btn>
+        <v-btn
+          class="modern-btn"
+          color="primary"
+          @click="saveDeck"
+          :loading="saving"
+          prepend-icon="mdi-content-save"
+        >
+          {{ editMode ? 'Update' : 'Create' }}
+        </v-btn>
+      </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -261,23 +262,24 @@
           This action cannot be undone.
         </v-card-text>
 
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="grey darken-1"
-            text
-            @click="showDeleteDialog = false"
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="error"
-            @click="confirmDelete"
-            :loading="deleting"
-          >
-            Delete
-          </v-btn>
-        </v-card-actions>
+      <v-card-actions class="btn-row btn-row--end">
+        <v-btn
+          class="modern-btn"
+          variant="outlined"
+          @click="showDeleteDialog = false"
+        >
+          Cancel
+        </v-btn>
+        <v-btn
+          class="modern-btn"
+          color="error"
+          @click="confirmDelete"
+          :loading="deleting"
+          prepend-icon="mdi-delete"
+        >
+          Delete
+        </v-btn>
+      </v-card-actions>
       </v-card>
     </v-dialog>
   </div>

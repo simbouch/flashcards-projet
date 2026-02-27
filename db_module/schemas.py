@@ -157,6 +157,16 @@ class UserInDB(UserBase):
 class User(UserInDB):
     pass
 
+
+# User statistics
+class UserStats(BaseModel):
+    """Aggregate statistics for the currently authenticated user."""
+
+    documents: int = 0
+    decks: int = 0
+    flashcards: int = 0
+    study_sessions: int = 0
+
 # Document schemas
 class DocumentBase(BaseModel):
     filename: str

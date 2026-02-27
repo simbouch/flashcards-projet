@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="documents-view">
     <v-container class="py-8">
       <!-- Page Header -->
@@ -93,8 +93,8 @@
                   </div>
                 </template>
 
-                <template #[`item.actions`]="{ item }">
-                  <div class="d-flex gap-2">
+        <template #[`item.actions`]="{ item }">
+          <div class="btn-row btn-row--compact">
                     <v-btn
                       class="modern-btn"
                       color="primary"
@@ -116,7 +116,7 @@
                       <v-icon start color="error">mdi-delete</v-icon>
                       <span class="text-high-emphasis">Delete</span>
                     </v-btn>
-                  </div>
+          </div>
                 </template>
               </v-data-table>
             </v-card-text>
@@ -205,8 +205,7 @@
           </div>
         </v-card-text>
 
-        <v-card-actions class="pa-6 pt-0">
-          <v-spacer></v-spacer>
+    <v-card-actions class="pa-6 pt-0 btn-row btn-row--end">
           <v-btn
             class="modern-btn"
             color="grey"
@@ -216,7 +215,7 @@
             Cancel
           </v-btn>
           <v-btn
-            class="modern-btn ml-2"
+      class="modern-btn"
             color="primary"
             @click="uploadDocument"
             :loading="uploading"
@@ -335,8 +334,7 @@
           </v-window>
         </v-card-text>
 
-        <v-card-actions>
-          <v-spacer />
+    <v-card-actions class="btn-row btn-row--end">
           <v-btn class="modern-btn" variant="outlined" @click="showViewDialog = false">Close</v-btn>
         </v-card-actions>
       </v-card>
@@ -358,8 +356,7 @@
           This action cannot be undone.
         </v-card-text>
 
-        <v-card-actions>
-          <v-spacer></v-spacer>
+    <v-card-actions class="btn-row btn-row--end">
           <v-btn
             class="modern-btn"
             variant="outlined"

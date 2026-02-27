@@ -89,6 +89,9 @@ export const authAPI = {
   updateProfile(userData) {
     return apiClient.put('/users/me', userData)
   },
+  getStats() {
+    return apiClient.get('/users/me/stats')
+  },
   refreshToken(refreshToken) {
     return apiClient.post('/auth/refresh', { refresh_token: refreshToken })
   },
