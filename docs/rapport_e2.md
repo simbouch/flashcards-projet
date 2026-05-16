@@ -18,21 +18,7 @@
 
 Je remercie [[À AJOUTER : formateur(s), équipe, structure d'accueil]] pour leur accompagnement tout au long de ce projet.
 
----
-
-## Sommaire
-
-1. Introduction et contexte
-2. Architecture technique
-3. Conteneurisation et déploiement
-4. Intégration continue et livraison continue (CI/CD)
-5. Monitoring et observabilité
-6. Gestion de la configuration et des secrets
-7. Runbook — démarrage, vérification, arrêt
-8. Risques identifiés et mesures prises
-9. Conclusion
-
----
+[[TOC]]
 
 ## 1. Introduction et contexte
 

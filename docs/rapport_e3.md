@@ -18,23 +18,7 @@
 
 Je remercie [[À AJOUTER : formateur(s), équipe, structure d'accueil]] pour leur soutien tout au long de ce projet.
 
----
-
-## Sommaire
-
-1. Introduction
-2. Stratégie de tests
-3. Tests unitaires — backend et base de données
-4. Tests unitaires — service LLM
-5. Tests unitaires — service OCR
-6. Tests d'intégration end-to-end
-7. Qualité du code — lint et formatage
-8. Validation spécifique au modèle IA
-9. Résultats globaux
-10. Limitations connues et axes d'amélioration
-11. Conclusion
-
----
+[[TOC]]
 
 ## 1. Introduction
 
