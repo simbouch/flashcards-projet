@@ -1,74 +1,51 @@
-# Flashcards Project Database Documentation
+# Project Documentation
 
-This folder contains the complete documentation of the database structure used in the Flashcards project.
+This folder contains the reference documentation for the Flashcards application:
+data model, database schema, LLM benchmarking methodology, and admin account
+management.
 
 ## Contents
 
-1. [Conceptual Data Model (CDM)](database_mcd.md) - Conceptual representation of entities and their relationships
-2. [Physical Data Model (PDM)](database_mpd.md) - Physical representation of tables and their constraints
-3. [Database Schema](database_schema.md) - Overview and class diagram of the database
-4. [LLM benchmarking](llm_benchmarking.md) - Methodology + commands + evidence locations
-5. [Admin & system user management](admin_system_users.md) - How the initial admin is bootstrapped + why `system` is reserved
+| Document | Purpose |
+|---|---|
+| [database_mcd.md](database_mcd.md) | Conceptual Data Model (entities and relationships) |
+| [database_mpd.md](database_mpd.md) | Physical Data Model (tables, columns, constraints) |
+| [database_schema.md](database_schema.md) | Database class diagram and overview |
+| [database_diagrams/](database_diagrams/) | Rendered MCD / MLD / MPD diagrams (PNG) |
+| [llm_benchmarking.md](llm_benchmarking.md) | LLM benchmarking methodology, commands and evidence locations |
+| [admin_system_users.md](admin_system_users.md) | Initial admin bootstrap and the reserved `system` account |
+| [MONITORING_GUIDE.md](MONITORING_GUIDE.md) | Monitoring walkthrough — Prometheus, Grafana, Alertmanager |
+| [SECURITY.md](SECURITY.md) | Security policy and vulnerability reporting |
+| [PRIVACY.md](PRIVACY.md) | Privacy policy for the application |
 
-## RNCP (E2–E5) checklists & report scaffolds
+> Mermaid diagrams render natively on GitHub and in VS Code with the Mermaid
+> extension. You can also paste the code blocks into the
+> [Mermaid Live Editor](https://mermaid.live/).
 
-These are **short, practical checklists** that point to concrete evidence in this repository,
-plus a suggested report outline for each part.
+## Database overview
 
-1. [RNCP E2](rncp_e2.md) - Build/deploy/operate (Docker, CI, monitoring)
-2. [RNCP E3](rncp_e3.md) - Testing & quality (unit/integration, lint, benchmarks)
-3. [RNCP E4](rncp_e4.md) - Project management (agile process + artifacts)
-4. [RNCP E5](rncp_e5.md) - Documentation & communication (user/tech docs)
+The schema is organised around the following groups of entities (full details in
+[database_schema.md](database_schema.md)):
 
-## Viewing the Diagrams
+- **Users and authentication** — `users`, `refresh_tokens`
+- **Documents and processing** — `documents`, `extracted_texts`
+- **Flashcards and decks** — `decks`, `flashcards`, `user_deck_association`
+- **Study and review** — `study_sessions`, `study_records`
 
-The diagrams are created using Mermaid syntax. To view them:
+## Implementation references
 
-1. Open the markdown files in an editor that supports Mermaid (like GitHub, VS Code with the Mermaid extension, etc.)
-2. Or copy the content of the Mermaid code blocks into an online editor like [Mermaid Live Editor](https://mermaid.live/)
+The runtime implementation lives in:
 
-## Database Structure
+- `db_module/models.py` — SQLAlchemy ORM models
+- `db_module/database.py` — engine and session configuration
+- `db_module/schemas.py` — Pydantic schemas for API validation
+- `db_module/crud.py` — CRUD helpers used by the backend service
 
-The database is organized around several main entities:
+## Design notes
 
-### Users and Authentication
-- **users**: Stores user information
-- **refresh_tokens**: Manages refresh tokens for authentication
-
-### Documents and Processing
-- **documents**: Stores metadata for uploaded documents
-- **extracted_texts**: Contains text extracted from documents via OCR
-
-### Flashcards and Decks
-- **decks**: Represents flashcard decks
-- **flashcards**: Stores question/answer cards
-- **user_deck_association**: Manages deck sharing between users
-
-### Study and Review
-- **study_sessions**: Records study sessions
-- **study_records**: Tracks performance for each flashcard
-
-## Technologies Used
-
-- **SQLAlchemy**: ORM (Object-Relational Mapping) for interacting with the database
-- **PostgreSQL**: Relational database management system
-- **Alembic**: Database migration tool
-
-## Implementation
-
-The implementation code for this schema can be found in:
-- `db_module/models.py`: SQLAlchemy model definitions
-- `db_module/database.py`: Database connection configuration
-- `db_module/schemas.py`: Pydantic schemas for data validation
-
-## Design Considerations
-
-1. **UUID vs Auto-increment**: Using UUIDs for primary keys instead of auto-incremented identifiers for better security and flexibility.
-
-2. **Many-to-Many Relationships**: Using association tables (user_deck_association) to manage many-to-many relationships.
-
-3. **Soft Delete**: No soft delete implementation yet, but could be added by adding a deleted_at field to relevant tables.
-
-4. **Timestamps**: Using created_at and updated_at fields for tracking changes.
-
-5. **Enumerations**: Using enumerations for document statuses and user roles to ensure data consistency.
+- **UUID primary keys** for security and portability between environments.
+- **Association tables** (e.g. `user_deck_association`) for many-to-many links.
+- **Timestamps** (`created_at`, `updated_at`) on user-facing entities.
+- **Enumerations** for document status and user roles to keep values consistent.
+- **SQLite by default** for local development; the schema is portable to
+  PostgreSQL by switching `DATABASE_URL`.
