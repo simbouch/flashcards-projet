@@ -85,6 +85,23 @@ instance/
 # Sphinx documentation
 docs/_build/
 
+# RNCP report generation scripts and outputs (local only, not for GitHub)
+.vscode/
+docs/_dump_orig/
+docs/_dump_originals.py
+docs/convert_individual.py
+docs/convert_to_pdf.py
+docs/corrected_reports/
+docs/corrected_reports_pdf/
+docs/correction_v2/
+docs/generate_corrected_reports.py
+docs/generate_v2_reports.py
+docs/jury_preparation.md
+docs/new_rncp_folder_report/
+docs/v2_assets/
+docs/verify_corrections.py
+docs/verify_v2_reports.py
+
 # PyBuilder
 .pybuilder/
 target/
