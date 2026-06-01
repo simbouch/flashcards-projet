@@ -80,27 +80,35 @@ jobs:
     - name: Generate changelog
       id: changelog
       run: |
+        # Use the previous tag if it exists, otherwise fall back to the first commit
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+        echo "Generating changelog from ${PREV_TAG} to HEAD..."
+
         echo "# Changelog for ${{ github.ref_name }}" > changelog.md
         echo "" >> changelog.md
+
         echo "## 🚀 New Features" >> changelog.md
-        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s" --grep="^feat" >> changelog.md
+        git log ${PREV_TAG}..HEAD --pretty=format:"* %s" --grep="^feat" >> changelog.md || true
         echo "" >> changelog.md
+
         echo "## 🐛 Bug Fixes" >> changelog.md
-        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s" --grep="^fix" >> changelog.md
+        git log ${PREV_TAG}..HEAD --pretty=format:"* %s" --grep="^fix" >> changelog.md || true
         echo "" >> changelog.md
+
         echo "## 🔧 Other Changes" >> changelog.md
-        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s" --grep -v "^feat\|^fix" >> changelog.md
+        git log ${PREV_TAG}..HEAD --pretty=format:"* %s" --invert-grep --grep="^feat\|^fix" >> changelog.md || true
+        echo "" >> changelog.md
+
+        echo "## 🐳 Docker Images" >> changelog.md
+        echo "- \`ghcr.io/${{ github.repository_owner }}/ocr-service:${{ github.ref_name }}\`" >> changelog.md
+        echo "- \`ghcr.io/${{ github.repository_owner }}/llm-service:${{ github.ref_name }}\`" >> changelog.md
+        echo "- \`ghcr.io/${{ github.repository_owner }}/db-module:${{ github.ref_name }}\`" >> changelog.md
+        echo "- \`ghcr.io/${{ github.repository_owner }}/backend-service:${{ github.ref_name }}\`" >> changelog.md
+        echo "- \`ghcr.io/${{ github.repository_owner }}/frontend-service:${{ github.ref_name }}\`" >> changelog.md
 
     - name: Update release with changelog
       uses: softprops/action-gh-release@v1
       with:
         body_path: changelog.md
-        append_body: |
-          ## Docker Images
-          - `ghcr.io/${{ github.repository_owner }}/ocr-service:${{ github.ref_name }}`
-          - `ghcr.io/${{ github.repository_owner }}/llm-service:${{ github.ref_name }}`
-          - `ghcr.io/${{ github.repository_owner }}/db-module:${{ github.ref_name }}`
-          - `ghcr.io/${{ github.repository_owner }}/backend-service:${{ github.ref_name }}`
-          - `ghcr.io/${{ github.repository_owner }}/frontend-service:${{ github.ref_name }}`
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
