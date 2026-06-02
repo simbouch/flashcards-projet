@@ -45,7 +45,7 @@ The monitoring stack includes:
 - **Redis Exporter**: http://localhost:9121
 
 ### Application Services
-- **Frontend**: http://localhost
+- **Frontend**: http://localhost:8080
 - **Backend API**: http://localhost:8002/docs
 - **OCR API**: http://localhost:8000/docs
 - **LLM API**: http://localhost:8001/docs
@@ -55,19 +55,19 @@ The monitoring stack includes:
 ### Full Stack
 ```bash
 # Start all services including monitoring
-docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 ```
 
 ### Application Only
 ```bash
 # Start just the application services
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Monitoring Only
 ```bash
 # Start just the monitoring services
-docker-compose -f docker-compose.monitoring.yml up -d
+docker compose -f docker-compose.monitoring.yml up -d
 ```
 
 ## Key Metrics
@@ -209,7 +209,7 @@ groups:
 #### Prometheus Not Scraping Metrics
 1. Check service discovery configuration
 2. Verify metrics endpoints are accessible
-3. Check Prometheus logs: `docker-compose logs prometheus`
+3. Check Prometheus logs: `docker compose logs prometheus`
 
 #### Grafana Dashboard Not Loading
 1. Verify Prometheus data source configuration
@@ -231,17 +231,17 @@ groups:
 #### Application Logs
 ```bash
 # View service logs
-docker-compose logs -f ocr-service
-docker-compose logs -f llm-service
-docker-compose logs -f backend-service
+docker compose logs -f ocr-service
+docker compose logs -f llm-service
+docker compose logs -f backend-service
 ```
 
 #### Monitoring Logs
 ```bash
 # View monitoring service logs
-docker-compose logs -f prometheus
-docker-compose logs -f grafana
-docker-compose logs -f alertmanager
+docker compose logs -f prometheus
+docker compose logs -f grafana
+docker compose logs -f alertmanager
 ```
 
 ## Performance Optimization

@@ -13,7 +13,7 @@ We provide security updates for the following versions of the Flashcards Applica
 We take the security of our application seriously. If you believe you've found a security vulnerability, please follow these steps:
 
 1. **Do not disclose the vulnerability publicly** until it has been addressed by our team.
-2. Email your findings to security@flashcards-app.com.
+2. Email your findings to bouchaib.khribech@gmail.com.
 3. Include detailed information about the vulnerability, including:
    - The type of vulnerability
    - Steps to reproduce
@@ -41,7 +41,7 @@ The Flashcards Application implements the following security measures:
 
 ### Data Protection
 
-- HTTPS for all communications
+- HTTPS for all communications in production (HTTP in local development)
 - Encryption of sensitive data at rest
 - Input validation and sanitization
 - Parameterized queries to prevent SQL injection
