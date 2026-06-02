@@ -31,7 +31,7 @@ The monitoring stack includes:
 ## Service URLs
 
 ### Core Monitoring
-- **Grafana**: http://localhost:3000 (admin/admin)
+- **Grafana**: http://localhost:3000 (admin/flashcards2024)
 - **Prometheus**: http://localhost:9090
 - **AlertManager**: http://localhost:9093
 
@@ -45,7 +45,7 @@ The monitoring stack includes:
 - **Redis Exporter**: http://localhost:9121
 
 ### Application Services
-- **Frontend**: http://localhost:8080
+- **Frontend**: http://localhost
 - **Backend API**: http://localhost:8002/docs
 - **OCR API**: http://localhost:8000/docs
 - **LLM API**: http://localhost:8001/docs
@@ -149,7 +149,7 @@ docker-compose -f docker-compose.monitoring.yml up -d
 ### Custom Dashboard Creation
 
 1. Access Grafana at http://localhost:3000
-2. Login with admin/admin
+2. Login with admin/flashcards2024
 3. Create new dashboard
 4. Add panels with Prometheus queries
 5. Configure alerts and notifications
